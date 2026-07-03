@@ -4,9 +4,13 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -18,88 +22,122 @@ import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
+import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.width
+import androidx.glance.layout.size
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.curbscript.tvremote.R
 import com.curbscript.tvremote.control.Controller
+import com.curbscript.tvremote.proto.RemoteKeyCode
+
+private val CMD = ActionParameters.Key<String>("cmd")
+private val TILE_BG = Color(0xCC15171C)
+private val OK_BG = Color(0xE63A56C8)
 
 /**
- * Compact home-screen widget: TV power / volume / mute plus two quick app launches.
- * Each tap dispatches directly through the shared [Controller].
+ * Full-feature living-room widget: transparent background, dark translucent
+ * control tiles, brand app tiles, resizable up to ~5x6. All taps dispatch
+ * through the shared [Controller] (TV keys -> Vizio, navigation/apps -> onn).
  */
 class RemoteWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent { WidgetContent() }
+        provideContent { Content() }
     }
 
     @Composable
-    private fun WidgetContent() {
+    private fun Content() {
         Column(
-            modifier = GlanceModifier
-                .fillMaxSize()
-                .background(Color(0xFF16181D))
-                .cornerRadius(22.dp)
-                .padding(10.dp),
+            modifier = GlanceModifier.fillMaxSize().padding(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                WidgetButton("Power", Color(0xFFFF5A5F), Color.White,
-                    actionRunCallback<PowerAction>(), GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(6.dp))
-                WidgetButton("Vol −", Color(0xFF1F232B), Color.White,
-                    actionRunCallback<VolDownAction>(), GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(6.dp))
-                WidgetButton("Vol +", Color(0xFF1F232B), Color.White,
-                    actionRunCallback<VolUpAction>(), GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(6.dp))
-                WidgetButton("Mute", Color(0xFF1F232B), Color.White,
-                    actionRunCallback<MuteAction>(), GlanceModifier.defaultWeight())
+            Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                Ctl(R.drawable.ic_power, "power", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_volume_down, "vol_down", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_volume_up, "vol_up", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_volume_mute, "mute", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_input, "input", GlanceModifier.defaultWeight())
             }
-            Spacer(GlanceModifier.height(8.dp))
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                WidgetButton("YouTube", Color(0xFFFF0033), Color.White,
-                    actionRunCallback<YouTubeAction>(), GlanceModifier.defaultWeight())
-                Spacer(GlanceModifier.width(6.dp))
-                WidgetButton("Netflix", Color(0xFFE50914), Color.White,
-                    actionRunCallback<NetflixAction>(), GlanceModifier.defaultWeight())
+            Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                Ctl(R.drawable.ic_back, "back", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_dpad_up, "up", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_home, "home", GlanceModifier.defaultWeight())
+            }
+            Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                Ctl(R.drawable.ic_dpad_left, "left", GlanceModifier.defaultWeight())
+                Ok(GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_dpad_right, "right", GlanceModifier.defaultWeight())
+            }
+            Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                Ctl(R.drawable.ic_rewind, "rewind", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_dpad_down, "down", GlanceModifier.defaultWeight())
+                Ctl(R.drawable.ic_forward, "forward", GlanceModifier.defaultWeight())
+            }
+            Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                Ctl(R.drawable.ic_play_pause, "playpause", GlanceModifier.defaultWeight())
+            }
+            Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
+                Tile(R.drawable.ic_app_tivimate, "app_tivimate", GlanceModifier.defaultWeight())
+                Tile(R.drawable.ic_app_youtube, "app_youtube", GlanceModifier.defaultWeight())
+                Tile(R.drawable.ic_app_netflix, "app_netflix", GlanceModifier.defaultWeight())
+                Tile(R.drawable.ic_app_spotify, "app_spotify", GlanceModifier.defaultWeight())
             }
         }
     }
-}
 
-@Composable
-private fun WidgetButton(
-    label: String,
-    bg: Color,
-    fg: Color,
-    action: androidx.glance.action.Action,
-    modifier: GlanceModifier
-) {
-    Box(
-        modifier = modifier
-            .height(52.dp)
-            .background(bg)
-            .cornerRadius(14.dp)
-            .clickable(action),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            label,
-            style = TextStyle(
-                color = ColorProvider(fg),
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center
+    @Composable
+    private fun Ctl(iconRes: Int, cmd: String, modifier: GlanceModifier) {
+        Box(
+            modifier = modifier.fillMaxHeight().padding(3.dp).background(TILE_BG).cornerRadius(14.dp)
+                .clickable(actionRunCallback<RemoteAction>(actionParametersOf(CMD to cmd))),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                provider = ImageProvider(iconRes),
+                contentDescription = null,
+                modifier = GlanceModifier.size(24.dp)
             )
-        )
+        }
+    }
+
+    @Composable
+    private fun Ok(modifier: GlanceModifier) {
+        Box(
+            modifier = modifier.fillMaxHeight().padding(3.dp).background(OK_BG).cornerRadius(16.dp)
+                .clickable(actionRunCallback<RemoteAction>(actionParametersOf(CMD to "ok"))),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "OK",
+                style = TextStyle(
+                    color = ColorProvider(Color.White),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            )
+        }
+    }
+
+    @Composable
+    private fun Tile(iconRes: Int, cmd: String, modifier: GlanceModifier) {
+        Box(
+            modifier = modifier.fillMaxHeight().padding(3.dp)
+                .clickable(actionRunCallback<RemoteAction>(actionParametersOf(CMD to cmd))),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                provider = ImageProvider(iconRes),
+                contentDescription = null,
+                modifier = GlanceModifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+        }
     }
 }
 
@@ -107,40 +145,29 @@ class RemoteWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = RemoteWidget()
 }
 
-// ---- Action callbacks ----
-
-class PowerAction : ActionCallback {
+class RemoteAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Controller.get(context).tvPowerToggle()
-    }
-}
-
-class VolUpAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Controller.get(context).tvVolumeUp()
-    }
-}
-
-class VolDownAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Controller.get(context).tvVolumeDown()
-    }
-}
-
-class MuteAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Controller.get(context).tvMuteToggle()
-    }
-}
-
-class YouTubeAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Controller.get(context).onnLaunch("https://www.youtube.com")
-    }
-}
-
-class NetflixAction : ActionCallback {
-    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        Controller.get(context).onnLaunch("https://www.netflix.com/title")
+        val c = Controller.get(context)
+        when (parameters[CMD]) {
+            "power" -> c.tvPowerToggle()
+            "vol_up" -> c.tvVolumeUp()
+            "vol_down" -> c.tvVolumeDown()
+            "mute" -> c.tvMuteToggle()
+            "input" -> c.tvCycleInput()
+            "up" -> c.onnKey(RemoteKeyCode.KEYCODE_DPAD_UP)
+            "down" -> c.onnKey(RemoteKeyCode.KEYCODE_DPAD_DOWN)
+            "left" -> c.onnKey(RemoteKeyCode.KEYCODE_DPAD_LEFT)
+            "right" -> c.onnKey(RemoteKeyCode.KEYCODE_DPAD_RIGHT)
+            "ok" -> c.onnKey(RemoteKeyCode.KEYCODE_DPAD_CENTER)
+            "back" -> c.onnKey(RemoteKeyCode.KEYCODE_BACK)
+            "home" -> c.onnKey(RemoteKeyCode.KEYCODE_HOME)
+            "playpause" -> c.onnKey(RemoteKeyCode.KEYCODE_MEDIA_PLAY_PAUSE)
+            "rewind" -> c.onnKey(RemoteKeyCode.KEYCODE_MEDIA_REWIND)
+            "forward" -> c.onnKey(RemoteKeyCode.KEYCODE_MEDIA_FAST_FORWARD)
+            "app_tivimate" -> c.onnLaunch("market://launch?id=ar.tvplayer.tv")
+            "app_youtube" -> c.onnLaunch("market://launch?id=com.google.android.youtube.tv")
+            "app_netflix" -> c.onnLaunch("market://launch?id=com.netflix.ninja")
+            "app_spotify" -> c.onnLaunch("market://launch?id=com.spotify.tv.android")
+        }
     }
 }
