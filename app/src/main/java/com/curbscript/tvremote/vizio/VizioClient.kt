@@ -152,3 +152,5 @@ class VizioClient(
             })
             SSLContext.getInstance("TLS").apply { init(null, tm, SecureRandom()) }.socketFactory
         }
+    }
+}
