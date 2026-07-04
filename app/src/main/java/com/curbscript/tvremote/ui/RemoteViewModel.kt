@@ -31,6 +31,14 @@ sealed interface PairPhase {
     data object Success : PairPhase
 }
 
+/** Preset light scenes. [mood] optionally launches an app on the room's TV to set the vibe. */
+enum class Scene(val label: String, val on: Boolean, val brightness: Int, val mood: String?) {
+    MOVIE("Movie", true, 12, null),
+    DAYTIME("Daytime", true, 100, null),
+    NIGHT("Night", true, 4, null),
+    CHILL("Chill", true, 35, "spotify")
+}
+
 class RemoteViewModel(app: Application) : AndroidViewModel(app) {
 
     private val controller = Controller.get(app)
@@ -262,6 +270,30 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun setBrightness(id: String, pct: Int) = viewModelScope.launch {
         controller.setLightBrightness(id, pct)
         _lights.value = _lights.value.map { if (it.id == id) it.copy(brightness = pct) else it }
+    }
+
+    // ---- room light selection + scene modes ----
+    var editingLights by mutableStateOf(false)
+        private set
+    fun toggleEditLights() { editingLights = !editingLights }
+    fun setLightSelected(id: String, selected: Boolean) = viewModelScope.launch {
+        val cfg = controller.config.get()
+        val set = cfg.lightsFor(cfg.room).toMutableSet()
+        if (selected) set.add(id) else set.remove(id)
+        controller.config.setRoomLights(cfg.room, set)
+    }
+    fun runScene(scene: Scene) = viewModelScope.launch {
+        val cfg = controller.config.get()
+        val selected = cfg.lightsFor(cfg.room)
+        val targets = _lights.value.filter { selected.isEmpty() || it.id in selected }
+        targets.forEach { controller.setLight(it.id, scene.on, scene.brightness) }
+        _lights.value = _lights.value.map { l ->
+            if (targets.any { it.id == l.id }) l.copy(on = scene.on, brightness = scene.brightness) else l
+        }
+        if (scene.mood == "spotify") {
+            if (cfg.room == "bedroom") controller.bedLaunch(SamsungController.APP_SPOTIFY)
+            else controller.onnLaunch("market://launch?id=com.spotify.tv.android")
+        }
     }
 
     // ---- IPTV / TV Guide ----

@@ -2,6 +2,7 @@ package com.curbscript.tvremote.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeDown
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -123,7 +125,7 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit, o
                 }
             }
             Spacer(Modifier.height(6.dp))
-            LightsSection(vm, cfg.room, cfg.hubspaceReady)
+            LightsSection(vm, cfg)
             Spacer(Modifier.height(10.dp))
             if (bedroom) BedroomRemote(vm, cfg.navTrackpad) else LivingRemote(vm, cfg.navTrackpad)
             Spacer(Modifier.height(40.dp))
@@ -273,32 +275,95 @@ private fun VolumeRocker(onDown: () -> Unit, onUp: () -> Unit) {
 }
 
 @Composable
-private fun LightsSection(vm: RemoteViewModel, room: String, hubspaceReady: Boolean) {
-    if (!hubspaceReady) return
+private fun LightsSection(vm: RemoteViewModel, cfg: Config) {
+    if (!cfg.hubspaceReady) return
     val all by vm.lights.collectAsState()
-    val matched = all.filter { it.room == room || it.room == "both" }
-    val lights = if (matched.isEmpty() && all.isNotEmpty()) all else matched
+    val selectedIds = cfg.lightsFor(cfg.room)
+    val shown = if (selectedIds.isEmpty()) all else all.filter { it.id in selectedIds }
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-        SectionLabel("Lights")
-        IconKey(Icons.Rounded.Refresh, { vm.refreshLights() }, size = 38.dp,
-            background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 18.dp)
+        SectionLabel(if (vm.editingLights) "Lights · pick this room's" else "Lights")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconKey(Icons.Rounded.Tune, { vm.toggleEditLights() }, size = 38.dp,
+                background = if (vm.editingLights) RemoteColors.surfaceHi else RemoteColors.surface,
+                tint = if (vm.editingLights) RemoteColors.coral else RemoteColors.muted, iconSize = 18.dp)
+            IconKey(Icons.Rounded.Refresh, { vm.refreshLights() }, size = 38.dp,
+                background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 18.dp)
+        }
     }
     Spacer(Modifier.height(12.dp))
     when {
-        vm.lightsLoading && lights.isEmpty() ->
+        vm.lightsLoading && all.isEmpty() ->
             Text("Loading your bulbs…", color = RemoteColors.muted, fontSize = 13.sp)
-        lights.isEmpty() ->
+        all.isEmpty() ->
             Text(
                 "Signed in, but no bulbs loaded. " +
                     (if (vm.lightsDiag.isNotBlank()) "Details: " + vm.lightsDiag + ". " else "") +
                     "Tap refresh — if it still fails, send me this line.",
                 color = RemoteColors.muted, fontSize = 13.sp
             )
-        else -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            lights.forEach { light ->
-                LightCard(light, { vm.toggleLight(light.id, it) }, { vm.setBrightness(light.id, it) })
+        vm.editingLights -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "Tap the lights in " + (if (cfg.room == "bedroom") "the Bedroom" else "the Living Room") +
+                    " — only these show on the remote.",
+                color = RemoteColors.muted, fontSize = 12.sp
+            )
+            all.forEach { light ->
+                LightPickRow(light, light.id in selectedIds) { sel -> vm.setLightSelected(light.id, sel) }
             }
         }
+        else -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (shown.isEmpty())
+                Text(
+                    "No lights chosen for this room yet — tap the sliders icon to pick.",
+                    color = RemoteColors.muted, fontSize = 13.sp
+                )
+            else {
+                SceneRow { vm.runScene(it) }
+                shown.forEach { light ->
+                    LightCard(light, { vm.toggleLight(light.id, it) }, { vm.setBrightness(light.id, it) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SceneRow(onScene: (Scene) -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        SectionLabel("Scenes")
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Scene.values().forEach { s ->
+                Box(
+                    Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(RemoteColors.surfaceHi)
+                        .border(1.dp, RemoteColors.border, RoundedCornerShape(14.dp))
+                        .clickable { onScene(s) }.padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(s.label, color = RemoteColors.onSurface, fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LightPickRow(light: HubspaceLight, selected: Boolean, onSelected: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(RemoteColors.surface)
+            .border(1.dp, if (selected) RemoteColors.coral else RemoteColors.border, RoundedCornerShape(14.dp))
+            .clickable { onSelected(!selected) }.padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(light.name, color = RemoteColors.onSurface, fontSize = 14.sp)
+        Switch(
+            checked = selected, onCheckedChange = onSelected,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White, checkedTrackColor = RemoteColors.coral,
+                uncheckedTrackColor = RemoteColors.surfaceHi
+            )
+        )
     }
 }
 

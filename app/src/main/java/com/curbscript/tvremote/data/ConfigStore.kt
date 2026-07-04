@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -30,8 +31,11 @@ data class Config(
     val iptvUser: String = "",
     val iptvPass: String = "",
     val iptvM3u: String = "",
-    val iptvEpg: String = ""
+    val iptvEpg: String = "",
+    val livingLights: Set<String> = emptySet(),
+    val bedroomLights: Set<String> = emptySet()
 ) {
+    fun lightsFor(r: String): Set<String> = if (r == "bedroom") bedroomLights else livingLights
     val onnReady: Boolean get() = onnHost.isNotBlank() && onnPaired
     val vizioReady: Boolean get() = vizioHost.isNotBlank() && vizioToken.isNotBlank()
     val samsungReady: Boolean get() = samsungHost.isNotBlank() && samsungToken.isNotBlank()
@@ -65,7 +69,9 @@ class ConfigStore(context: Context) {
             iptvUser = p[Keys.IPTV_USER] ?: "",
             iptvPass = p[Keys.IPTV_PASS] ?: "",
             iptvM3u = p[Keys.IPTV_M3U] ?: "",
-            iptvEpg = p[Keys.IPTV_EPG] ?: ""
+            iptvEpg = p[Keys.IPTV_EPG] ?: "",
+            livingLights = p[Keys.LIVING_LIGHTS] ?: emptySet(),
+            bedroomLights = p[Keys.BEDROOM_LIGHTS] ?: emptySet()
         )
     }
 
@@ -92,6 +98,8 @@ class ConfigStore(context: Context) {
         }
     suspend fun setHubspace(refresh: String, account: String) =
         store.edit { it[Keys.HS_REFRESH] = refresh; it[Keys.HS_ACCOUNT] = account }
+    suspend fun setRoomLights(room: String, ids: Set<String>) =
+        store.edit { it[if (room == "bedroom") Keys.BEDROOM_LIGHTS else Keys.LIVING_LIGHTS] = ids }
 
     private object Keys {
         val ONN_HOST = stringPreferencesKey("onn_host")
@@ -111,5 +119,7 @@ class ConfigStore(context: Context) {
         val IPTV_PASS = stringPreferencesKey("iptv_pass")
         val IPTV_M3U = stringPreferencesKey("iptv_m3u")
         val IPTV_EPG = stringPreferencesKey("iptv_epg")
+        val LIVING_LIGHTS = stringSetPreferencesKey("living_lights")
+        val BEDROOM_LIGHTS = stringSetPreferencesKey("bedroom_lights")
     }
 }

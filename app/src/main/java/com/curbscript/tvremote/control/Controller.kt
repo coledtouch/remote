@@ -182,6 +182,13 @@ class Controller private constructor(context: Context) {
         try { hs()?.setPower(id, on) ?: false } catch (_: Exception) { false }
     suspend fun setLightBrightness(id: String, pct: Int): Boolean =
         try { hs()?.setBrightness(id, pct) ?: false } catch (_: Exception) { false }
+    suspend fun setLight(id: String, on: Boolean, brightness: Int): Boolean {
+        val c = hs() ?: return false
+        return try {
+            if (on) { c.setPower(id, true); c.setBrightness(id, brightness) } else c.setPower(id, false)
+            true
+        } catch (_: Exception) { false }
+    }
 
     suspend fun discoverDevices(): List<Discovered> {
         val list = try { DiscoveryManager(appContext).scan() } catch (_: Exception) { emptyList() }
