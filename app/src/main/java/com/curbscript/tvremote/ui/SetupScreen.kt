@@ -66,6 +66,28 @@ fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: ()
                 }
             }
 
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = { vm.scan() }, enabled = !vm.scanning,
+                colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.surfaceHi),
+                shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
+            ) {
+                if (vm.scanning) {
+                    CircularProgressIndicator(color = RemoteColors.coral, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Scanning your Wi-Fi…")
+                } else {
+                    Text("Auto-detect devices on Wi-Fi")
+                }
+            }
+            if (vm.foundDevices.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Found " + vm.foundDevices.joinToString { it.name + " (" + it.ip + ")" } + " — IPs filled in below.",
+                    color = RemoteColors.good, fontSize = 12.sp, modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             Spacer(Modifier.height(22.dp))
             SectionHeader("Living Room")
             PairingCard(
@@ -138,7 +160,7 @@ private fun PairingCard(
     onConfirm: (String) -> Unit,
     onReset: () -> Unit
 ) {
-    var host by rememberSaveable(title) { mutableStateOf(initialHost) }
+    var host by rememberSaveable(title, initialHost) { mutableStateOf(initialHost) }
     var port by rememberSaveable(title) { mutableStateOf(initialPort.toString()) }
     var code by rememberSaveable(title) { mutableStateOf("") }
 

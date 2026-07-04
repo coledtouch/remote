@@ -2,6 +2,8 @@ package com.curbscript.tvremote.control
 
 import android.content.Context
 import com.curbscript.tvremote.data.ConfigStore
+import com.curbscript.tvremote.discovery.Discovered
+import com.curbscript.tvremote.discovery.DiscoveryManager
 import com.curbscript.tvremote.hubspace.HubspaceClient
 import com.curbscript.tvremote.hubspace.HubspaceLight
 import com.curbscript.tvremote.onn.AndroidTvPairing
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 class Controller private constructor(context: Context) {
 
+    private val appContext = context.applicationContext
     val config = ConfigStore(context)
     private val certManager = CertManager(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -156,6 +159,18 @@ class Controller private constructor(context: Context) {
         try { hs()?.setPower(id, on) ?: false } catch (_: Exception) { false }
     suspend fun setLightBrightness(id: String, pct: Int): Boolean =
         try { hs()?.setBrightness(id, pct) ?: false } catch (_: Exception) { false }
+
+    suspend fun discoverDevices(): List<Discovered> {
+        val list = try { DiscoveryManager(appContext).scan() } catch (_: Exception) { emptyList() }
+        list.forEach { d ->
+            when (d.type) {
+                "vizio" -> config.setVizioHost(d.ip)
+                "onn" -> config.setOnnHost(d.ip)
+                "samsung" -> config.setSamsungHost(d.ip)
+            }
+        }
+        return list
+    }
 
     companion object {
         @Volatile private var INSTANCE: Controller? = null

@@ -69,6 +69,9 @@ class ConfigStore(context: Context) {
 
     suspend fun setNavTrackpad(v: Boolean) = store.edit { it[Keys.NAV_TRACKPAD] = v }
     suspend fun setRoom(r: String) = store.edit { it[Keys.ROOM] = r }
+    suspend fun setOnnHost(host: String) = store.edit { it[Keys.ONN_HOST] = host.trim() }
+    suspend fun setVizioHost(host: String) = store.edit { it[Keys.VIZIO_HOST] = host.trim() }
+    suspend fun setSamsungHost(host: String) = store.edit { it[Keys.SAMSUNG_HOST] = host.trim() }
     suspend fun setHubspace(refresh: String, account: String) =
         store.edit { it[Keys.HS_REFRESH] = refresh; it[Keys.HS_ACCOUNT] = account }
 

@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.curbscript.tvremote.control.Controller
 import com.curbscript.tvremote.data.AppShortcut
 import com.curbscript.tvremote.data.Config
+import com.curbscript.tvremote.discovery.Discovered
 import com.curbscript.tvremote.hubspace.HubspaceLight
 import com.curbscript.tvremote.onn.AndroidTvPairing
 import com.curbscript.tvremote.proto.RemoteKeyCode
@@ -36,6 +37,19 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         controller.config.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Config())
 
     val imeActive: StateFlow<Boolean> = controller.imeActive
+
+    // ---- auto-detect ----
+    var scanning by mutableStateOf(false)
+        private set
+    var foundDevices by mutableStateOf<List<Discovered>>(emptyList())
+        private set
+    fun scan() {
+        scanning = true
+        viewModelScope.launch {
+            foundDevices = try { controller.discoverDevices() } catch (_: Exception) { emptyList() }
+            scanning = false
+        }
+    }
 
     // ---- room + nav preferences ----
     fun setRoom(room: String) = viewModelScope.launch { controller.config.setRoom(room) }
