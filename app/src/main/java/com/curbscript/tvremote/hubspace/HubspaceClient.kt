@@ -29,7 +29,7 @@ data class HubspaceLight(
 /**
  * Client for the Hubspace / Afero cloud (Home Depot "thd" realm). Cloud-only:
  * OAuth (Keycloak, PKCE) login, then device discovery + state control on api2.afero.net.
- * Written from the public API shape; endpoints may need field-tuning.
+ * [login] returns null on success, or a human-readable error describing the failing step.
  */
 class HubspaceClient(
     private var refreshToken: String? = null,
@@ -55,29 +55,44 @@ class HubspaceClient(
     fun refreshTokenValue(): String? = refreshToken
     fun accountValue(): String? = accountId
 
-    /** Full email/password login. Returns true and stores refresh token + account on success. */
-    suspend fun login(email: String, password: String): Boolean = withContext(Dispatchers.IO) {
+    /** Email/password login. Returns null on success, else a message for the failing step. */
+    suspend fun login(email: String, password: String): String? = withContext(Dispatchers.IO) {
         try {
-            val verifier = randomString(64)
+            val verifier = randomCodeVerifier()
             val challenge = codeChallenge(verifier)
             val authUrl = "$OIDC/auth?response_type=code&client_id=$CLIENT_ID&redirect_uri=$REDIRECT" +
                 "&code_challenge=$challenge&code_challenge_method=S256&scope=openid%20offline_access" +
-                "&state=${randomString(16)}&nonce=${randomString(16)}"
-            val page = client.newCall(Request.Builder().url(authUrl).header("User-Agent", UA).build()).execute()
+                "&state=${randomHex(16)}&nonce=${randomHex(16)}"
+
+            val page = client.newCall(
+                Request.Builder().url(authUrl)
+                    .header("User-Agent", UA).header("Accept", "text/html").build()
+            ).execute()
             val html = page.body?.string() ?: ""
+            val pageCode = page.code
             page.close()
-            val action = Regex("<form[^>]*action=\"([^\"]+)\"").find(html)?.groupValues?.get(1)
-                ?.replace("&amp;", "&") ?: return@withContext false
+            if (html.isBlank()) return@withContext "Couldn't reach the Hubspace sign-in page (HTTP $pageCode)"
+
+            val action = (Regex("action=\"([^\"]*authenticate[^\"]*)\"").find(html)
+                ?: Regex("<form[^>]*action=\"([^\"]+)\"").find(html))
+                ?.groupValues?.get(1)?.replace("&amp;", "&")
+                ?: return@withContext "Hubspace sign-in form not found — their login page may have changed"
 
             val noRedirect = client.newBuilder().followRedirects(false).build()
             val form = FormBody.Builder()
                 .add("username", email).add("password", password).add("credentialId", "").build()
             val loginResp = noRedirect.newCall(
-                Request.Builder().url(action).post(form).header("User-Agent", UA).build()
+                Request.Builder().url(action).post(form)
+                    .header("User-Agent", UA).header("Referer", authUrl).build()
             ).execute()
             val location = loginResp.header("Location") ?: ""
+            val loginCode = loginResp.code
             loginResp.close()
-            val code = Regex("code=([^&]+)").find(location)?.groupValues?.get(1) ?: return@withContext false
+            if (location.isBlank()) {
+                return@withContext "Email or password was rejected (HTTP $loginCode)"
+            }
+            val code = Regex("[?&]code=([^&]+)").find(location)?.groupValues?.get(1)
+                ?: return@withContext "Signed in but no auth code was returned (account may need a step in the Hubspace app)"
 
             val tokenForm = FormBody.Builder()
                 .add("grant_type", "authorization_code").add("code", code)
@@ -85,19 +100,24 @@ class HubspaceClient(
                 .add("client_id", CLIENT_ID).build()
             val tok = client.newCall(Request.Builder().url("$OIDC/token").post(tokenForm)
                 .header("User-Agent", UA).build()).execute()
-            val tokJson = JSONObject(tok.body?.string() ?: "{}")
+            val tokBody = tok.body?.string() ?: "{}"
+            val tokCode = tok.code
             tok.close()
-            accessToken = tokJson.optString("access_token").ifBlank { null } ?: return@withContext false
+            val tokJson = JSONObject(tokBody)
+            accessToken = tokJson.optString("access_token").ifBlank { null }
+                ?: return@withContext "Token exchange failed (HTTP $tokCode)"
             refreshToken = tokJson.optString("refresh_token").ifBlank { refreshToken }
-            accountId = fetchAccountId()
-            accountId != null
+            // Account id is best-effort — login itself has already succeeded.
+            accountId = try { fetchAccountId() } catch (_: Exception) { accountId }
+            null
         } catch (e: Exception) {
-            false
+            "Sign-in error: ${e.message ?: e.javaClass.simpleName}"
         }
     }
 
     suspend fun listLights(): List<HubspaceLight> = withContext(Dispatchers.IO) {
         ensureAccess()
+        if (accountId == null) accountId = try { fetchAccountId() } catch (_: Exception) { null }
         val acct = accountId ?: return@withContext emptyList()
         val raw = apiRaw("GET", "/accounts/$acct/metadevices?expansions=state", null)
             ?: return@withContext emptyList()
@@ -151,9 +171,8 @@ class HubspaceClient(
     private fun fetchAccountId(): String? {
         val raw = apiRaw("GET", "/users/me?expansions=account", null) ?: return null
         return try {
-            val me = JSONObject(raw)
-            me.optJSONArray("accountAccess")?.optJSONObject(0)?.optJSONObject("account")?.optString("accountId")
-                ?.ifBlank { null }
+            JSONObject(raw).optJSONArray("accountAccess")?.optJSONObject(0)
+                ?.optJSONObject("account")?.optString("accountId")?.ifBlank { null }
         } catch (_: Exception) { null }
     }
 
@@ -184,7 +203,6 @@ class HubspaceClient(
         return try {
             val rb = Request.Builder().url("$API$path")
                 .header("Authorization", "Bearer $at")
-                .header("host", AFERO_HOST)
                 .header("User-Agent", UA)
             when (method) {
                 "PUT" -> rb.put((body?.toString() ?: "{}").toRequestBody(JSON))
@@ -206,10 +224,16 @@ class HubspaceClient(
         }
     }
 
-    private fun randomString(len: Int): String {
+    private fun randomCodeVerifier(): String {
+        val bytes = ByteArray(40)
+        SecureRandom().nextBytes(bytes)
+        return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
+    }
+
+    private fun randomHex(len: Int): String {
         val bytes = ByteArray(len)
         SecureRandom().nextBytes(bytes)
-        return Base64.encodeToString(bytes, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING).take(len)
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     private fun codeChallenge(verifier: String): String {
@@ -222,7 +246,6 @@ class HubspaceClient(
         private const val REDIRECT = "hubspace-app://loginredirect"
         private const val OIDC = "https://accounts.hubspaceconnect.com/auth/realms/thd/protocol/openid-connect"
         private const val API = "https://api2.afero.net/v1"
-        private const val AFERO_HOST = "semantics2.afero.net"
         private const val UA = "Dart/2.15 (dart:io)"
         private val JSON = "application/json; charset=utf-8".toMediaType()
     }

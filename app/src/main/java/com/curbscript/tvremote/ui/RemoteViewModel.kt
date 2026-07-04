@@ -221,9 +221,9 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun loginHubspace(email: String, password: String) {
         hubspacePhase = PairPhase.Connecting
         viewModelScope.launch {
-            val ok = controller.hubspaceLogin(email.trim(), password)
-            if (ok) { hubspacePhase = PairPhase.Success; refreshLights() }
-            else hubspacePhase = PairPhase.Error("Login failed — check email and password")
+            val err = controller.hubspaceLogin(email.trim(), password)
+            if (err == null) { hubspacePhase = PairPhase.Success; refreshLights() }
+            else hubspacePhase = PairPhase.Error(err)
         }
     }
     fun resetHubspacePhase() { hubspacePhase = PairPhase.Idle }

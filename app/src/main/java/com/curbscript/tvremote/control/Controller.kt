@@ -139,14 +139,15 @@ class Controller private constructor(context: Context) {
         return c
     }
 
-    suspend fun hubspaceLogin(email: String, password: String): Boolean {
+    /** Returns null on success, or a message describing the failing step. */
+    suspend fun hubspaceLogin(email: String, password: String): String? {
         val c = HubspaceClient()
-        val ok = try { c.login(email, password) } catch (_: Exception) { false }
-        if (ok) {
+        val err = try { c.login(email, password) } catch (e: Exception) { e.message ?: "Sign-in error" }
+        if (err == null) {
             hubspace = c
             config.setHubspace(c.refreshTokenValue() ?: "", c.accountValue() ?: "")
         }
-        return ok
+        return err
     }
 
     suspend fun lights(): List<HubspaceLight> =
