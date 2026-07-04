@@ -10,6 +10,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.curbscript.tvremote.cast.CastHelper
 import com.curbscript.tvremote.player.PlayerActivity
 import com.curbscript.tvremote.ui.CurbRemoteTheme
 import com.curbscript.tvremote.ui.GuideScreen
@@ -20,6 +21,7 @@ import com.curbscript.tvremote.ui.SetupScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CastHelper.context(this)
         setContent {
             CurbRemoteTheme {
                 val vm: RemoteViewModel = viewModel()
@@ -34,7 +36,10 @@ class MainActivity : ComponentActivity() {
                     )
                     screen == "guide" -> GuideScreen(
                         vm = vm, onBack = { screen = "remote" },
-                        onPlay = { ch -> PlayerActivity.start(ctx, ch.streamUrl, ch.name) }
+                        onPlay = { ch ->
+                            if (CastHelper.isConnected(ctx)) CastHelper.cast(ctx, ch.streamUrl, ch.name, ch.logo)
+                            else PlayerActivity.start(ctx, ch.streamUrl, ch.name)
+                        }
                     )
                     else -> RemoteScreen(
                         vm = vm, cfg = cfg,

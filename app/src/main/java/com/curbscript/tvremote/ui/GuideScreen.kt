@@ -27,6 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.viewinterop.AndroidView
+import android.view.ContextThemeWrapper
+import androidx.mediarouter.app.MediaRouteButton
+import com.google.android.gms.cast.framework.CastButtonFactory
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,8 +61,11 @@ fun GuideScreen(vm: RemoteViewModel, onBack: () -> Unit, onPlay: (IptvChannel) -
                 IconKey(Icons.AutoMirrored.Rounded.ArrowBack, onBack, size = 44.dp,
                     background = RemoteColors.surface, tint = RemoteColors.onSurface, iconSize = 20.dp)
                 Text("TV Guide", color = RemoteColors.onSurface, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                IconKey(Icons.Rounded.Refresh, { vm.loadIptv() }, size = 44.dp,
-                    background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 20.dp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    CastButton()
+                    IconKey(Icons.Rounded.Refresh, { vm.loadIptv() }, size = 44.dp,
+                        background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 20.dp)
+                }
             }
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -123,4 +130,16 @@ private fun ChannelRow(
             }
         }
     }
+}
+
+@Composable
+private fun CastButton() {
+    AndroidView(
+        factory = { ctx ->
+            MediaRouteButton(ContextThemeWrapper(ctx, androidx.appcompat.R.style.Theme_AppCompat)).also { btn ->
+                try { CastButtonFactory.setUpMediaRouteButton(ctx.applicationContext, btn) } catch (_: Exception) {}
+            }
+        },
+        modifier = Modifier.size(40.dp)
+    )
 }
