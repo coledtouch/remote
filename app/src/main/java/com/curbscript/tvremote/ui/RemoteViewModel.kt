@@ -270,7 +270,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var guideQuery by mutableStateOf("")
         private set
-    fun setGuideQuery(q: String) { guideQuery = q }
+    fun updateGuideQuery(q: String) { guideQuery = q }
     fun loadIptv() {
         iptvLoading = true
         viewModelScope.launch {

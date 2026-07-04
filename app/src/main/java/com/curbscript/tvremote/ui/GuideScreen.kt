@@ -62,7 +62,7 @@ fun GuideScreen(vm: RemoteViewModel, onBack: () -> Unit, onPlay: (IptvChannel) -
             }
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
-                value = query, onValueChange = { vm.setGuideQuery(it) },
+                value = query, onValueChange = { vm.updateGuideQuery(it) },
                 placeholder = { Text("Search channels") }, singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = RemoteColors.coral, unfocusedBorderColor = RemoteColors.border,
