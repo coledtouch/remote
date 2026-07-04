@@ -245,14 +245,11 @@ class HubspaceClient(
         } catch (_: Exception) { ApiResp(-2, null) }
     }
 
-    private fun combos(): List<Pair<String, String?>> {
-        workingBase?.let { return listOf(it to workingHost) }
-        return listOf(
-            "https://api2.afero.net/v1" to "semantics2.afero.net",
-            "https://api2.afero.net/v1" to null,
-            "https://semantics2.afero.net/v1" to "semantics2.afero.net"
-        )
-    }
+    private fun combos(): List<Pair<String, String?>> = listOf(
+        "https://api2.afero.net/v1" to null,
+        "https://semantics2.afero.net/v1" to null,
+        "https://api2.afero.net/v1" to "semantics2.afero.net"
+    )
 
     private fun roomFor(name: String): String {
         val n = name.lowercase()
