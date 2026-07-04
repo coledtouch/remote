@@ -39,8 +39,8 @@ object AdbInstaller {
                 val dir = File(context.filesDir, "adb").apply { mkdirs() }
                 val priv = File(dir, "adbkey")
                 val pub = File(dir, "adbkey.pub")
-                if (priv.exists() && pub.exists()) AdbKeyPair.read(priv, pub)
-                else AdbKeyPair.generate(priv, pub)
+                if (!priv.exists() || !pub.exists()) AdbKeyPair.generate(priv, pub)
+                AdbKeyPair.read(priv, pub)
             } catch (e: Exception) {
                 onStatus("Couldn't create the ADB key: ${e.message ?: "unknown error"}")
                 return@withContext false
