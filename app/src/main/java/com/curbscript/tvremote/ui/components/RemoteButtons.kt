@@ -19,6 +19,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -144,25 +149,25 @@ fun DPad(
     ) {
         val edge = 4.dp
         IconKey(
-            androidx.compose.material.icons.Icons.Rounded.KeyboardArrowUp, onUp,
+            Icons.Rounded.KeyboardArrowUp, onUp,
             Modifier.align(Alignment.TopCenter).padding(top = edge),
             size = 62.dp, background = Color.Transparent, borderColor = Color.Transparent,
             tint = RemoteColors.onSurface, iconSize = 34.dp
         )
         IconKey(
-            androidx.compose.material.icons.Icons.Rounded.KeyboardArrowDown, onDown,
+            Icons.Rounded.KeyboardArrowDown, onDown,
             Modifier.align(Alignment.BottomCenter).padding(bottom = edge),
             size = 62.dp, background = Color.Transparent, borderColor = Color.Transparent,
             tint = RemoteColors.onSurface, iconSize = 34.dp
         )
         IconKey(
-            androidx.compose.material.icons.Icons.Rounded.KeyboardArrowLeft, onLeft,
+            Icons.Rounded.KeyboardArrowLeft, onLeft,
             Modifier.align(Alignment.CenterStart).padding(start = edge),
             size = 62.dp, background = Color.Transparent, borderColor = Color.Transparent,
             tint = RemoteColors.onSurface, iconSize = 34.dp
         )
         IconKey(
-            androidx.compose.material.icons.Icons.Rounded.KeyboardArrowRight, onRight,
+            Icons.Rounded.KeyboardArrowRight, onRight,
             Modifier.align(Alignment.CenterEnd).padding(end = edge),
             size = 62.dp, background = Color.Transparent, borderColor = Color.Transparent,
             tint = RemoteColors.onSurface, iconSize = 34.dp
