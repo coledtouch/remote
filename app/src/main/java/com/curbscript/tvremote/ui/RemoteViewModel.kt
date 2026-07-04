@@ -32,11 +32,13 @@ sealed interface PairPhase {
 }
 
 /** Preset light scenes. [mood] optionally launches an app on the room's TV to set the vibe. */
-enum class Scene(val label: String, val on: Boolean, val brightness: Int, val mood: String?) {
-    MOVIE("Movie", true, 12, null),
-    DAYTIME("Daytime", true, 100, null),
-    NIGHT("Night", true, 4, null),
-    CHILL("Chill", true, 35, "spotify")
+enum class Scene(
+    val label: String, val on: Boolean, val brightness: Int, val kelvin: Int?, val mood: String?
+) {
+    MOVIE("Movie", true, 12, 2700, null),      // warm + dim
+    DAYTIME("Daytime", true, 100, 5000, null), // cool + bright
+    NIGHT("Night", true, 4, 2700, null),       // warm + very dim
+    CHILL("Chill", true, 35, 2700, "spotify")  // warm + music
 }
 
 class RemoteViewModel(app: Application) : AndroidViewModel(app) {
@@ -286,7 +288,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         val cfg = controller.config.get()
         val selected = cfg.lightsFor(cfg.room)
         val targets = _lights.value.filter { selected.isEmpty() || it.id in selected }
-        targets.forEach { controller.setLight(it.id, scene.on, scene.brightness) }
+        targets.forEach { controller.setLight(it.id, scene.on, scene.brightness, scene.kelvin) }
         _lights.value = _lights.value.map { l ->
             if (targets.any { it.id == l.id }) l.copy(on = scene.on, brightness = scene.brightness) else l
         }

@@ -160,6 +160,11 @@ class HubspaceClient(
         putState(id, "brightness", null, pct.coerceIn(1, 100))
     }
 
+    /** Sets white color temperature in Kelvin. Best-effort: no-op on non-tunable bulbs. */
+    suspend fun setColorTemp(id: String, kelvin: Int): Boolean = withContext(Dispatchers.IO) {
+        putState(id, "color-temperature", null, kelvin)
+    }
+
     // ---- internals ----
 
     private fun toLight(d: JSONObject): HubspaceLight? {

@@ -182,10 +182,13 @@ class Controller private constructor(context: Context) {
         try { hs()?.setPower(id, on) ?: false } catch (_: Exception) { false }
     suspend fun setLightBrightness(id: String, pct: Int): Boolean =
         try { hs()?.setBrightness(id, pct) ?: false } catch (_: Exception) { false }
-    suspend fun setLight(id: String, on: Boolean, brightness: Int): Boolean {
+    suspend fun setLight(id: String, on: Boolean, brightness: Int, kelvin: Int? = null): Boolean {
         val c = hs() ?: return false
         return try {
-            if (on) { c.setPower(id, true); c.setBrightness(id, brightness) } else c.setPower(id, false)
+            if (on) {
+                c.setPower(id, true); c.setBrightness(id, brightness)
+                if (kelvin != null) runCatching { c.setColorTemp(id, kelvin) }
+            } else c.setPower(id, false)
             true
         } catch (_: Exception) { false }
     }
