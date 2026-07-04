@@ -7,6 +7,8 @@ import com.curbscript.tvremote.iptv.IptvChannel
 import com.curbscript.tvremote.iptv.IptvProgram
 import com.curbscript.tvremote.iptv.IptvRepository
 import com.curbscript.tvremote.iptv.IptvSettings
+import com.curbscript.tvremote.tvsync.TvSyncClient
+import kotlinx.coroutines.delay
 import com.curbscript.tvremote.discovery.Discovered
 import com.curbscript.tvremote.discovery.DiscoveryManager
 import com.curbscript.tvremote.hubspace.HubspaceClient
@@ -196,6 +198,18 @@ class Controller private constructor(context: Context) {
         if (cfg.iptvReady) iptvRepo.loadEpg(iptvSettings(cfg))
     }
     fun iptvNowNext(epgId: String?): Pair<IptvProgram?, IptvProgram?> = iptvRepo.nowNext(epgId)
+
+    // ---- Companion TV app (phone -> onn player) ----
+    suspend fun playOnTv(url: String, title: String): Boolean {
+        val host = config.get().onnHost
+        if (host.isBlank()) return false
+        onnLaunch("market://launch?id=com.curbscript.tvremote.tv")
+        repeat(6) { i ->
+            delay(if (i == 0) 1500L else 1000L)
+            if (TvSyncClient.play(host, url, title)) return true
+        }
+        return false
+    }
 
     companion object {
         @Volatile private var INSTANCE: Controller? = null

@@ -37,8 +37,11 @@ class MainActivity : ComponentActivity() {
                     screen == "guide" -> GuideScreen(
                         vm = vm, onBack = { screen = "remote" },
                         onPlay = { ch ->
-                            if (CastHelper.isConnected(ctx)) CastHelper.cast(ctx, ch.streamUrl, ch.name, ch.logo)
-                            else PlayerActivity.start(ctx, ch.streamUrl, ch.name)
+                            when {
+                                vm.watchOnTv -> vm.playOnTv(ch)
+                                CastHelper.isConnected(ctx) -> CastHelper.cast(ctx, ch.streamUrl, ch.name, ch.logo)
+                                else -> PlayerActivity.start(ctx, ch.streamUrl, ch.name)
+                            }
                         }
                     )
                     else -> RemoteScreen(

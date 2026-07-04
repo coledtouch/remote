@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "CurbRemote"
 include(":app")
+include(":tvapp")

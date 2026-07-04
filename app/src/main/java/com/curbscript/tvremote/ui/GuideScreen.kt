@@ -42,6 +42,7 @@ import androidx.compose.runtime.collectAsState
 import coil.compose.AsyncImage
 import com.curbscript.tvremote.iptv.IptvChannel
 import com.curbscript.tvremote.ui.components.IconKey
+import com.curbscript.tvremote.ui.components.SegmentedToggle
 
 @Composable
 fun GuideScreen(vm: RemoteViewModel, onBack: () -> Unit, onPlay: (IptvChannel) -> Unit) {
@@ -77,6 +78,12 @@ fun GuideScreen(vm: RemoteViewModel, onBack: () -> Unit, onPlay: (IptvChannel) -
                     cursorColor = RemoteColors.coral
                 ),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+            Spacer(Modifier.height(10.dp))
+            SegmentedToggle(
+                listOf("Watch on phone", "Watch on TV"),
+                if (vm.watchOnTv) 1 else 0, { vm.setWatchOnTv(it == 1) },
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
             Spacer(Modifier.height(10.dp))
             when {

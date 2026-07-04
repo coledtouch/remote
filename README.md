@@ -133,3 +133,18 @@ app/src/main/
     widget/                  Glance home‑screen widget
 .github/workflows/build.yml  Cloud APK build
 ```
+
+## Companion TV app (Curb TV) — Phase 3
+
+`tvapp/` is a separate, minimal Android TV app. Install it on the onn 4K Pro to watch
+IPTV channels on the TV, controlled from your phone (Guide → "Watch on TV").
+
+- CI builds it as **tvapp-debug.apk** alongside the phone APK (same Actions artifact).
+- Sideload it onto the onn:
+  - **Easiest:** on the onn, install the **Downloader** app (by AFTVnews) from Google Play,
+    then open the artifact link / a hosted copy of `tvapp-debug.apk` and let it install
+    (enable "install unknown apps" for Downloader when prompted), or
+  - **adb:** `adb connect <onn-ip>:5555` then `adb install tvapp-debug.apk`.
+- Open **Curb TV** once on the onn; it shows `http://<onn-ip>:8099` and waits.
+- On the phone: open the **TV Guide**, flip **Watch on TV**, tap a channel — the phone
+  launches Curb TV on the onn and streams the channel there.

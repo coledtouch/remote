@@ -268,6 +268,10 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     val channels: StateFlow<List<IptvChannel>> = _channels
     var iptvLoading by mutableStateOf(false)
         private set
+    var watchOnTv by mutableStateOf(false)
+        private set
+    fun setWatchOnTv(v: Boolean) { watchOnTv = v }
+    fun playOnTv(ch: IptvChannel) = fire { controller.playOnTv(ch.streamUrl, ch.name) }
     var guideQuery by mutableStateOf("")
         private set
     fun updateGuideQuery(q: String) { guideQuery = q }
