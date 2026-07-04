@@ -82,7 +82,14 @@ class AndroidTvPairing(
 
     /** Sends the secret derived from the on-screen [code]. Returns true when paired. */
     suspend fun finish(code: String): Boolean = withContext(Dispatchers.IO) {
-        val secret = computeSecret(code.trim())
+        val trimmed = code.trim()
+        val secret = computeSecret(trimmed)
+        // The first byte of the code is a checksum: it must equal the first byte
+        // of the secret hash. Catch a mistyped code instantly, before any round-trip.
+        if (trimmed.length >= 2) {
+            val check = hexToBytes(trimmed.substring(0, 2))
+            if (check.isEmpty() || check[0] != secret[0]) { close(); return@withContext false }
+        }
         send(
             base().setPairingSecret(
                 PairingSecret.newBuilder().setSecret(ByteString.copyFrom(secret))

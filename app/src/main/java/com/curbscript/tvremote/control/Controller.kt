@@ -129,11 +129,21 @@ class Controller private constructor(context: Context) {
         } catch (_: Exception) { false }
     }
 
-    private fun charToKeyCode(c: Char): RemoteKeyCode? = when {
-        c in 'a'..'z' -> RemoteKeyCode.forNumber(29 + (c - 'a'))
-        c in 'A'..'Z' -> RemoteKeyCode.forNumber(29 + (c - 'A'))
-        c in '0'..'9' -> RemoteKeyCode.forNumber(7 + (c - '0'))
-        c == ' ' -> RemoteKeyCode.KEYCODE_SPACE
+    private fun charToKeyCode(c: Char): RemoteKeyCode? = when (c) {
+        in 'a'..'z' -> RemoteKeyCode.forNumber(29 + (c - 'a'))
+        in 'A'..'Z' -> RemoteKeyCode.forNumber(29 + (c - 'A'))
+        in '0'..'9' -> RemoteKeyCode.forNumber(7 + (c - '0'))
+        ' ' -> RemoteKeyCode.KEYCODE_SPACE
+        '.' -> RemoteKeyCode.KEYCODE_PERIOD
+        ',' -> RemoteKeyCode.KEYCODE_COMMA
+        '-' -> RemoteKeyCode.KEYCODE_MINUS
+        '@' -> RemoteKeyCode.KEYCODE_AT
+        '/' -> RemoteKeyCode.KEYCODE_SLASH
+        '+' -> RemoteKeyCode.KEYCODE_PLUS
+        '=' -> RemoteKeyCode.KEYCODE_EQUALS
+        ';' -> RemoteKeyCode.KEYCODE_SEMICOLON
+        '\'' -> RemoteKeyCode.KEYCODE_APOSTROPHE
+        '`' -> RemoteKeyCode.KEYCODE_GRAVE
         else -> null
     }
 

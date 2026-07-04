@@ -24,12 +24,25 @@ object CastHelper {
         }
         val info = MediaInfo.Builder(url)
             .setStreamType(MediaInfo.STREAM_TYPE_LIVE)
-            .setContentType(if (url.endsWith(".m3u8")) "application/x-mpegURL" else "video/mp2t")
+            .setContentType(contentType(url))
             .setMetadata(meta)
             .build()
         return try {
             client.load(MediaLoadRequestData.Builder().setMediaInfo(info).build())
             true
         } catch (_: Exception) { false }
+    }
+
+    /** Best-effort content type, ignoring query strings. Defaults to HLS (most IPTV live streams). */
+    private fun contentType(url: String): String {
+        val path = url.substringBefore('?').lowercase()
+        return when {
+            path.endsWith(".m3u8") -> "application/x-mpegURL"
+            path.endsWith(".mpd") -> "application/dash+xml"
+            path.endsWith(".mp4") -> "video/mp4"
+            path.endsWith(".mkv") -> "video/x-matroska"
+            path.endsWith(".ts") -> "video/mp2t"
+            else -> "application/x-mpegURL"
+        }
     }
 }

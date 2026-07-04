@@ -91,8 +91,17 @@ class HubspaceClient(
             ).execute()
             val location = loginResp.header("Location") ?: ""
             val loginCode = loginResp.code
+            val loginBody = if (location.isBlank()) (loginResp.body?.string() ?: "") else ""
             loginResp.close()
-            if (location.isBlank()) return@withContext "Email or password rejected (HTTP $loginCode)"
+            if (location.isBlank()) {
+                val b = loginBody.lowercase()
+                if (b.contains("otp") || b.contains("one-time") || b.contains("authenticator") ||
+                    b.contains("verification code") || b.contains("two-factor")) {
+                    return@withContext "This Hubspace account has 2-factor (OTP) enabled, which isn't " +
+                        "supported yet. Temporarily turn it off in the Hubspace app, sign in here, then turn it back on."
+                }
+                return@withContext "Email or password rejected (HTTP $loginCode)"
+            }
             val code = Regex("[?&]code=([^&]+)").find(location)?.groupValues?.get(1)
                 ?: return@withContext "Signed in but no auth code returned"
 

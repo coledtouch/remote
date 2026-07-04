@@ -65,20 +65,34 @@ class TvMainActivity : Activity() {
     inner class PlayServer : NanoHTTPD(PORT) {
         override fun serve(session: IHTTPSession): Response {
             val p = session.parms
+            // Only requests carrying the shared app token may change playback.
+            val authed = session.headers["x-curb-auth"] == AUTH ||
+                p["tok"] == AUTH
             return when {
                 session.uri.startsWith("/play") -> {
+                    if (!authed) return forbidden()
                     val url = p["url"]
                     if (!url.isNullOrBlank()) { playUrl(url); json("{\"ok\":true}") }
                     else json("{\"ok\":false}")
                 }
-                session.uri.startsWith("/stop") -> { stopPlayback(); json("{\"ok\":true}") }
+                session.uri.startsWith("/stop") -> {
+                    if (!authed) return forbidden()
+                    stopPlayback(); json("{\"ok\":true}")
+                }
                 session.uri.startsWith("/state") -> json("{\"playing\":${player?.isPlaying == true}}")
                 else -> json("{\"app\":\"curb-tv\"}")
             }
         }
         private fun json(body: String): Response =
             newFixedLengthResponse(Response.Status.OK, "application/json", body)
+        private fun forbidden(): Response =
+            newFixedLengthResponse(Response.Status.FORBIDDEN, "application/json", "{\"ok\":false,\"error\":\"unauthorized\"}")
     }
 
-    companion object { const val PORT = 8099 }
+    companion object {
+        const val PORT = 8099
+        // Shared secret between the phone app and this companion app. Requests
+        // without it are rejected, so a random device on the LAN can't hijack playback.
+        const val AUTH = "curbtv-9f3a7c21e5b84d06a1"
+    }
 }

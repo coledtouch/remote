@@ -8,6 +8,9 @@ import java.util.Locale
 
 /** Streams an XMLTV EPG. Keeps only programmes ending in (roughly) the future. */
 object XmltvParser {
+    private const val PAST_WINDOW = 3_600_000L            // 1 hour
+    private const val FUTURE_WINDOW = 3L * 24 * 3_600_000 // 3 days
+
     fun parse(input: InputStream, now: Long): Map<String, MutableList<IptvProgram>> {
         val map = HashMap<String, MutableList<IptvProgram>>()
         val parser = Xml.newPullParser()
@@ -39,7 +42,10 @@ object XmltvParser {
                     "desc" -> if (inProg && desc == null) desc = text.trim()
                     "programme" -> {
                         val ch = channel
-                        if (inProg && ch != null && title != null && stop >= now - 3_600_000L) {
+                        // Keep only programmes ending in the recent past through a few days ahead,
+                        // so multi-week EPG feeds don't balloon memory.
+                        if (inProg && ch != null && title != null &&
+                            stop >= now - PAST_WINDOW && start <= now + FUTURE_WINDOW) {
                             map.getOrPut(ch) { ArrayList() }.add(IptvProgram(title!!, start, stop, desc))
                         }
                         inProg = false

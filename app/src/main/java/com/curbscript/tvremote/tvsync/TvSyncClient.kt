@@ -10,19 +10,23 @@ import java.util.concurrent.TimeUnit
 /** Talks to the companion Curb TV app running on the onn (HTTP on port 8099). */
 object TvSyncClient {
     const val PORT = 8099
+    // Must match TvMainActivity.AUTH in the companion app.
+    private const val AUTH = "curbtv-9f3a7c21e5b84d06a1"
     private val http = OkHttpClient.Builder()
         .connectTimeout(4, TimeUnit.SECONDS).readTimeout(4, TimeUnit.SECONDS).build()
 
     suspend fun play(host: String, url: String, title: String): Boolean = withContext(Dispatchers.IO) {
         try {
             val u = "http://$host:$PORT/play?url=${enc(url)}&title=${enc(title)}"
-            http.newCall(Request.Builder().url(u).build()).execute().use { it.isSuccessful }
+            http.newCall(Request.Builder().url(u).header("X-Curb-Auth", AUTH).build())
+                .execute().use { it.isSuccessful }
         } catch (_: Exception) { false }
     }
 
     suspend fun stop(host: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            http.newCall(Request.Builder().url("http://$host:$PORT/stop").build()).execute().use { it.isSuccessful }
+            http.newCall(Request.Builder().url("http://$host:$PORT/stop").header("X-Curb-Auth", AUTH).build())
+                .execute().use { it.isSuccessful }
         } catch (_: Exception) { false }
     }
 
