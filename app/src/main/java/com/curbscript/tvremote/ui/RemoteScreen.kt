@@ -3,6 +3,7 @@ package com.curbscript.tvremote.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,8 +83,10 @@ private val livingApps = listOf(
 fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit, onOpenGuide: () -> Unit) {
     val bedroom = cfg.room == "bedroom"
     val imeActive by vm.imeActive.collectAsState()
+    val toast by vm.toast.collectAsState()
     var showKb by remember { mutableStateOf(false) }
     LaunchedEffect(imeActive) { if (imeActive) showKb = true }
+    LaunchedEffect(toast) { if (toast != null) { delay(3500); vm.clearToast() } }
     LaunchedEffect(cfg.hubspaceReady) { if (cfg.hubspaceReady) vm.refreshLights() }
     Box(Modifier.fillMaxSize().background(RemoteColors.bg)) {
         Box(Modifier.fillMaxWidth().height(240.dp).background(RemoteColors.glow))
@@ -135,6 +138,16 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit, o
             onSend = { vm.sendQuery(it) },
             onClose = { showKb = false }
         )
+        if (!showKb) toast?.let { msg ->
+            Box(
+                Modifier.align(Alignment.BottomCenter).padding(20.dp).fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp)).background(RemoteColors.surfaceHi)
+                    .border(1.dp, RemoteColors.power, RoundedCornerShape(14.dp))
+                    .clickable { vm.clearToast() }.padding(14.dp)
+            ) {
+                Text(msg, color = RemoteColors.onSurface, fontSize = 13.sp)
+            }
+        }
     }
 }
 

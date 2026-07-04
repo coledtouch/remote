@@ -68,11 +68,11 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun setTrackpad(v: Boolean) = viewModelScope.launch { controller.config.setNavTrackpad(v) }
 
     // ---- Living room (Vizio + onn) ----
-    fun tvPower() = fire { controller.tvPowerToggle() }
-    fun volUp() = fire { controller.tvVolumeUp() }
-    fun volDown() = fire { controller.tvVolumeDown() }
-    fun mute() = fire { controller.tvMuteToggle() }
-    fun cycleInput() = fire { controller.tvCycleInput() }
+    fun tvPower() = act("Vizio TV", config.value.vizioReady) { controller.tvPowerToggle() }
+    fun volUp() = act("Vizio TV", config.value.vizioReady) { controller.tvVolumeUp() }
+    fun volDown() = act("Vizio TV", config.value.vizioReady) { controller.tvVolumeDown() }
+    fun mute() = act("Vizio TV", config.value.vizioReady) { controller.tvMuteToggle() }
+    fun cycleInput() = act("Vizio TV", config.value.vizioReady) { controller.tvCycleInput() }
 
     fun dpadUp() = onn(RemoteKeyCode.KEYCODE_DPAD_UP)
     fun dpadDown() = onn(RemoteKeyCode.KEYCODE_DPAD_DOWN)
@@ -85,9 +85,9 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun playPause() = onn(RemoteKeyCode.KEYCODE_MEDIA_PLAY_PAUSE)
     fun rewind() = onn(RemoteKeyCode.KEYCODE_MEDIA_REWIND)
     fun fastForward() = onn(RemoteKeyCode.KEYCODE_MEDIA_FAST_FORWARD)
-    fun launchApp(shortcut: AppShortcut) = fire { controller.onnLaunch(shortcut.appLink) }
-    fun launchOnn(url: String) = fire { controller.onnLaunch(url) }
-    private fun onn(key: RemoteKeyCode) = fire { controller.onnKey(key) }
+    fun launchApp(shortcut: AppShortcut) = act("onn box", config.value.onnReady) { controller.onnLaunch(shortcut.appLink) }
+    fun launchOnn(url: String) = act("onn box", config.value.onnReady) { controller.onnLaunch(url) }
+    private fun onn(key: RemoteKeyCode) = act("onn box", config.value.onnReady) { controller.onnKey(key) }
 
     // ---- Bedroom (Samsung monitor; soundbar via monitor) ----
     fun bedPower() = bed(SamsungController.KEY_POWER)
@@ -106,10 +106,10 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun bedPlayPause() = bed(SamsungController.KEY_PLAY)
     fun bedRewind() = bed(SamsungController.KEY_REWIND)
     fun bedForward() = bed(SamsungController.KEY_FF)
-    fun bedYouTube() = fire { controller.bedLaunch(SamsungController.APP_YOUTUBE) }
-    fun bedNetflix() = fire { controller.bedLaunch(SamsungController.APP_NETFLIX) }
-    fun bedSpotify() = fire { controller.bedLaunch(SamsungController.APP_SPOTIFY) }
-    private fun bed(key: String) = fire { controller.bedKey(key) }
+    fun bedYouTube() = act("Samsung monitor", config.value.samsungReady) { controller.bedLaunch(SamsungController.APP_YOUTUBE) }
+    fun bedNetflix() = act("Samsung monitor", config.value.samsungReady) { controller.bedLaunch(SamsungController.APP_NETFLIX) }
+    fun bedSpotify() = act("Samsung monitor", config.value.samsungReady) { controller.bedLaunch(SamsungController.APP_SPOTIFY) }
+    private fun bed(key: String) = act("Samsung monitor", config.value.samsungReady) { controller.bedKey(key) }
 
     fun sendQuery(text: String) = fire {
         if (config.value.room == "bedroom") {
@@ -120,6 +120,18 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun fire(block: suspend () -> Unit) { viewModelScope.launch { runCatching { block() } } }
+
+    // ---- action feedback (so a dead button explains itself) ----
+    private val _toast = MutableStateFlow<String?>(null)
+    val toast: StateFlow<String?> = _toast
+    fun clearToast() { _toast.value = null }
+    private fun act(device: String, ready: Boolean, block: suspend () -> Boolean) {
+        if (!ready) { _toast.value = "$device isn't set up yet — open Setup to pair it."; return }
+        viewModelScope.launch {
+            val ok = runCatching { block() }.getOrDefault(false)
+            _toast.value = if (ok) null else "Couldn't reach the $device. Make sure it's on and on the same Wi-Fi."
+        }
+    }
 
     // ---- onn pairing ----
     var onnPhase by mutableStateOf<PairPhase>(PairPhase.Idle)
