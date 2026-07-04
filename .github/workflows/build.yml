@@ -32,8 +32,16 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
-        run: gradle assembleDebug --stacktrace
+      - name: Build companion TV app
+        run: gradle :tvapp:assembleDebug --stacktrace
+
+      - name: Bundle TV app into the phone app (for one-tap sideload)
+        run: |
+          mkdir -p app/src/main/assets
+          cp tvapp/build/outputs/apk/debug/tvapp-debug.apk app/src/main/assets/curbtv.apk
+
+      - name: Build phone app
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

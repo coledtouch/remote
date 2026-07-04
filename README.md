@@ -148,3 +148,18 @@ IPTV channels on the TV, controlled from your phone (Guide → "Watch on TV").
 - Open **Curb TV** once on the onn; it shows `http://<onn-ip>:8099` and waits.
 - On the phone: open the **TV Guide**, flip **Watch on TV**, tap a channel — the phone
   launches Curb TV on the onn and streams the channel there.
+
+### One-tap install of Curb TV (auto-sideload over ADB)
+
+The phone app bundles `curbtv.apk` and can push it to your Android TV box itself
+(no computer, no Downloader):
+
+1. On the TV: Settings → System → About → tap **Build** 7× → **Developer options** →
+   enable **USB debugging** (and "Wireless debugging"/"ADB over network" if shown).
+2. In the phone app: **Setup → Install Curb TV on your box** → enter the TV's IP
+   (auto-filled from your onn) → **Install Curb TV**.
+3. **Accept** the "Allow debugging?" prompt on the TV the first time. The app installs
+   Curb TV over ADB (port 5555).
+
+If ADB 5555 isn't reachable on your box, fall back to sideloading `tvapp-debug.apk`
+via the Downloader app or `adb install`.

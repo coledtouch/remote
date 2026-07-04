@@ -12,3 +12,5 @@ app/build/
 build/
 *.apk
 !**/src/**/build/
+
+app/src/main/assets/curbtv.apk

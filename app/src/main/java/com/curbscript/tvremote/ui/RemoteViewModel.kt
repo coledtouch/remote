@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.curbscript.tvremote.control.Controller
 import com.curbscript.tvremote.data.AppShortcut
+import com.curbscript.tvremote.adb.AdbInstaller
 import com.curbscript.tvremote.data.Config
 import com.curbscript.tvremote.discovery.Discovered
 import com.curbscript.tvremote.hubspace.HubspaceLight
@@ -272,6 +273,20 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         private set
     fun updateWatchOnTv(v: Boolean) { watchOnTv = v }
     fun playOnTv(ch: IptvChannel) = fire { controller.playOnTv(ch.streamUrl, ch.name) }
+
+    // ---- one-tap sideload of Curb TV over ADB ----
+    var installing by mutableStateOf(false)
+        private set
+    var installStatus by mutableStateOf("")
+        private set
+    fun installCurbTv(host: String) {
+        installing = true
+        installStatus = "Starting…"
+        viewModelScope.launch {
+            AdbInstaller.install(getApplication(), host) { msg -> installStatus = msg }
+            installing = false
+        }
+    }
     var guideQuery by mutableStateOf("")
         private set
     fun updateGuideQuery(q: String) { guideQuery = q }

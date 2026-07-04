@@ -131,6 +131,8 @@ fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: ()
             Spacer(Modifier.height(22.dp))
             SectionHeader("TV Guide")
             IptvCard(cfg) { type, server, user, pass, m3u, epg -> vm.saveIptv(type, server, user, pass, m3u, epg) }
+            Spacer(Modifier.height(14.dp))
+            InstallTvCard(cfg, vm.installing, vm.installStatus) { host -> vm.installCurbTv(host) }
 
             Spacer(Modifier.height(22.dp))
             Text(
@@ -372,6 +374,38 @@ private fun IptvCard(cfg: Config, onSave: (String, String, String, String, Strin
                 colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.coral),
                 shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
             ) { Text("Save & load guide") }
+        }
+    }
+}
+
+@Composable
+private fun InstallTvCard(cfg: Config, installing: Boolean, status: String, onInstall: (String) -> Unit) {
+    var host by rememberSaveable { mutableStateOf(cfg.onnHost) }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = RemoteColors.surface),
+        shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Text("Install Curb TV on your box", color = RemoteColors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text("One-tap sideload to your onn / Android TV over Wi-Fi \u2014 no computer.",
+                color = RemoteColors.muted, fontSize = 12.sp)
+            Spacer(Modifier.height(14.dp))
+            OutlinedTextField(host, { host = it }, label = { Text("TV IP address") },
+                placeholder = { Text("192.168.1.60") }, singleLine = true,
+                colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(10.dp))
+            Text("First, on the TV: Settings, System, About, tap Build seven times, then Developer options, turn on USB debugging (and Wireless/ADB debugging if shown). Accept the prompt when it appears.",
+                color = RemoteColors.muted, fontSize = 11.sp)
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = { onInstall(host) }, enabled = !installing,
+                colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.coral),
+                shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
+            ) { Text(if (installing) "Working\u2026" else "Install Curb TV") }
+            if (status.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                val bad = status.startsWith("Couldn't") || status.startsWith("Enter") || status.startsWith("Curb TV app isn't")
+                Text(status, color = if (bad) RemoteColors.power else RemoteColors.good, fontSize = 13.sp)
+            }
         }
     }
 }

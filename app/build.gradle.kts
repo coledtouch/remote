@@ -90,6 +90,7 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("dev.mobile:dadb:1.2.10")
 
     // Home-screen widget
     implementation("androidx.glance:glance-appwidget:1.1.0")
