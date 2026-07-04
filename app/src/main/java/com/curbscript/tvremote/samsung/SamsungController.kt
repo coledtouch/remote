@@ -171,6 +171,8 @@ class SamsungController(
         const val KEY_MENU = "KEY_MENU"
         const val KEY_PLAY = "KEY_PLAY"
         const val KEY_PAUSE = "KEY_PAUSE"
+        const val KEY_REWIND = "KEY_REWIND"
+        const val KEY_FF = "KEY_FF"
         const val APP_NETFLIX = "11101200001"
         const val APP_YOUTUBE = "111299001912"
         const val APP_SPOTIFY = "3201606009684"

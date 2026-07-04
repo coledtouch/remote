@@ -11,13 +11,13 @@ import com.curbscript.tvremote.data.AppShortcut
 import com.curbscript.tvremote.data.Config
 import com.curbscript.tvremote.onn.AndroidTvPairing
 import com.curbscript.tvremote.proto.RemoteKeyCode
+import com.curbscript.tvremote.samsung.SamsungController
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-/** Progress state for a device pairing flow. */
 sealed interface PairPhase {
     data object Idle : PairPhase
     data object Connecting : PairPhase
@@ -33,14 +33,16 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     val config: StateFlow<Config> =
         controller.config.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Config())
 
-    // ---------- Remote actions (fire and forget) ----------
+    // ---- room + nav preferences ----
+    fun setRoom(room: String) = viewModelScope.launch { controller.config.setRoom(room) }
+    fun setTrackpad(v: Boolean) = viewModelScope.launch { controller.config.setNavTrackpad(v) }
 
+    // ---- Living room (Vizio + onn) ----
     fun tvPower() = fire { controller.tvPowerToggle() }
     fun volUp() = fire { controller.tvVolumeUp() }
     fun volDown() = fire { controller.tvVolumeDown() }
     fun mute() = fire { controller.tvMuteToggle() }
     fun cycleInput() = fire { controller.tvCycleInput() }
-    fun setInput(name: String) = fire { controller.tvSetInput(name) }
 
     fun dpadUp() = onn(RemoteKeyCode.KEYCODE_DPAD_UP)
     fun dpadDown() = onn(RemoteKeyCode.KEYCODE_DPAD_DOWN)
@@ -50,28 +52,42 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun back() = onn(RemoteKeyCode.KEYCODE_BACK)
     fun home() = onn(RemoteKeyCode.KEYCODE_HOME)
     fun menu() = onn(RemoteKeyCode.KEYCODE_MENU)
-
     fun playPause() = onn(RemoteKeyCode.KEYCODE_MEDIA_PLAY_PAUSE)
     fun rewind() = onn(RemoteKeyCode.KEYCODE_MEDIA_REWIND)
     fun fastForward() = onn(RemoteKeyCode.KEYCODE_MEDIA_FAST_FORWARD)
-    fun previous() = onn(RemoteKeyCode.KEYCODE_MEDIA_PREVIOUS)
-    fun next() = onn(RemoteKeyCode.KEYCODE_MEDIA_NEXT)
-
     fun launchApp(shortcut: AppShortcut) = fire { controller.onnLaunch(shortcut.appLink) }
-
+    fun launchOnn(url: String) = fire { controller.onnLaunch(url) }
     private fun onn(key: RemoteKeyCode) = fire { controller.onnKey(key) }
 
-    private fun fire(block: suspend () -> Unit) {
-        viewModelScope.launch { runCatching { block() } }
-    }
+    // ---- Bedroom (Samsung monitor; soundbar via monitor) ----
+    fun bedPower() = bed(SamsungController.KEY_POWER)
+    fun bedVolUp() = bed(SamsungController.KEY_VOLUP)
+    fun bedVolDown() = bed(SamsungController.KEY_VOLDOWN)
+    fun bedMute() = bed(SamsungController.KEY_MUTE)
+    fun bedSource() = bed(SamsungController.KEY_SOURCE)
+    fun bedUp() = bed(SamsungController.KEY_UP)
+    fun bedDown() = bed(SamsungController.KEY_DOWN)
+    fun bedLeft() = bed(SamsungController.KEY_LEFT)
+    fun bedRight() = bed(SamsungController.KEY_RIGHT)
+    fun bedOk() = bed(SamsungController.KEY_ENTER)
+    fun bedBack() = bed(SamsungController.KEY_RETURN)
+    fun bedHome() = bed(SamsungController.KEY_HOME)
+    fun bedMenu() = bed(SamsungController.KEY_MENU)
+    fun bedPlayPause() = bed(SamsungController.KEY_PLAY)
+    fun bedRewind() = bed(SamsungController.KEY_REWIND)
+    fun bedForward() = bed(SamsungController.KEY_FF)
+    fun bedYouTube() = fire { controller.bedLaunch(SamsungController.APP_YOUTUBE) }
+    fun bedNetflix() = fire { controller.bedLaunch(SamsungController.APP_NETFLIX) }
+    fun bedSpotify() = fire { controller.bedLaunch(SamsungController.APP_SPOTIFY) }
+    private fun bed(key: String) = fire { controller.bedKey(key) }
 
-    // ---------- onn pairing ----------
+    private fun fire(block: suspend () -> Unit) { viewModelScope.launch { runCatching { block() } } }
 
+    // ---- onn pairing ----
     var onnPhase by mutableStateOf<PairPhase>(PairPhase.Idle)
         private set
-
     private var pendingOnnPairing: AndroidTvPairing? = null
-    private var pendingOnnHost: String = ""
+    private var pendingOnnHost = ""
 
     fun startOnnPairing(host: String) {
         val h = host.trim()
@@ -111,11 +127,9 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
 
     fun resetOnnPhase() { onnPhase = PairPhase.Idle }
 
-    // ---------- Vizio pairing ----------
-
+    // ---- Vizio pairing ----
     var vizioPhase by mutableStateOf<PairPhase>(PairPhase.Idle)
         private set
-
     private var vizioDeviceId = ""
     private var vizioToken = 0
     private var pendingVizioHost = ""
@@ -156,6 +170,34 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun resetVizioPhase() { vizioPhase = PairPhase.Idle }
+
+    // ---- Samsung pairing (one step: Allow on the monitor) ----
+    var samsungPhase by mutableStateOf<PairPhase>(PairPhase.Idle)
+        private set
+    private var pendingSamsungHost = ""
+
+    fun startSamsungPairing(host: String) {
+        val h = host.trim()
+        if (h.isEmpty()) { samsungPhase = PairPhase.Error("Enter the monitor IP address"); return }
+        pendingSamsungHost = h
+        samsungPhase = PairPhase.AwaitingCode("Tap Allow on your monitor, then wait a moment…")
+        viewModelScope.launch {
+            runCatching {
+                controller.samsungPairing(h).pairAndGetToken()
+            }.onSuccess { token ->
+                if (!token.isNullOrBlank()) {
+                    controller.config.setSamsung(h, token)
+                    samsungPhase = PairPhase.Success
+                } else {
+                    samsungPhase = PairPhase.Error("No token received — tap Allow on the monitor and retry")
+                }
+            }.onFailure {
+                samsungPhase = PairPhase.Error(friendly(it, "Couldn't reach the monitor"))
+            }
+        }
+    }
+
+    fun resetSamsungPhase() { samsungPhase = PairPhase.Idle }
 
     private fun friendly(t: Throwable, fallback: String): String =
         t.message?.takeIf { it.isNotBlank() } ?: fallback

@@ -6,17 +6,16 @@ import com.curbscript.tvremote.onn.AndroidTvPairing
 import com.curbscript.tvremote.onn.AndroidTvRemote
 import com.curbscript.tvremote.onn.CertManager
 import com.curbscript.tvremote.proto.RemoteKeyCode
+import com.curbscript.tvremote.samsung.SamsungController
 import com.curbscript.tvremote.vizio.VizioClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * Single entry point used by both the app UI and the widget. Owns the persistent
- * onn session and builds Vizio clients on demand from saved config.
- *
- * Routing: TV hardware (power / volume / mute / input) goes to the Vizio SmartCast
- * API; navigation, playback and app launches go to the onn Google TV box.
+ * Single entry point for the app UI and widget. Routes commands to the right
+ * device per room: Living Room = Vizio (TV) + onn (Google TV); Bedroom = Samsung
+ * monitor (soundbar volume routed through it).
  */
 class Controller private constructor(context: Context) {
 
@@ -26,29 +25,28 @@ class Controller private constructor(context: Context) {
 
     @Volatile private var onn: AndroidTvRemote? = null
     @Volatile private var onnHost: String? = null
+    @Volatile private var samsung: SamsungController? = null
+    @Volatile private var samsungHost: String? = null
 
     // ---- Pairing factories ----
-
     fun onnPairing(host: String): AndroidTvPairing =
         AndroidTvPairing(host, certManager.socketFactory(), certManager.clientPublicKey())
 
     fun vizioClient(host: String, port: Int, token: String? = null): VizioClient =
         VizioClient(host, port, token)
 
-    // ---- onn (Google TV) commands ----
+    fun samsungPairing(host: String): SamsungController = SamsungController(host)
 
+    // ---- onn (Google TV) ----
     private suspend fun ensureOnn(): AndroidTvRemote? {
         val cfg = config.get()
         if (!cfg.onnReady) return null
         onn?.let { if (it.isReady && onnHost == cfg.onnHost) return it }
         val remote = AndroidTvRemote(cfg.onnHost, certManager.socketFactory())
-        return if (remote.connect(scope)) {
-            onn = remote; onnHost = cfg.onnHost; remote
-        } else null
+        return if (remote.connect(scope)) { onn = remote; onnHost = cfg.onnHost; remote } else null
     }
 
     suspend fun onnKey(key: RemoteKeyCode): Boolean = withOnnRetry { it.sendKey(key) }
-
     suspend fun onnLaunch(appLink: String): Boolean = withOnnRetry { it.launchApp(appLink) }
 
     private suspend fun withOnnRetry(action: suspend (AndroidTvRemote) -> Unit): Boolean {
@@ -62,8 +60,7 @@ class Controller private constructor(context: Context) {
         }
     }
 
-    // ---- Vizio (TV) commands ----
-
+    // ---- Vizio (living room TV) ----
     private suspend fun vizio(): VizioClient? {
         val cfg = config.get()
         if (!cfg.vizioReady) return null
@@ -81,10 +78,33 @@ class Controller private constructor(context: Context) {
     suspend fun tvMuteToggle() = withVizio { it.muteToggle() }
     suspend fun tvCycleInput() = withVizio { it.cycleInput() }
     suspend fun tvSetInput(name: String) = withVizio { it.setInput(name) }
+    suspend fun tvInputs(): List<String> =
+        try { vizio()?.listInputs() ?: emptyList() } catch (_: Exception) { emptyList() }
 
-    suspend fun tvInputs(): List<String> = try {
-        vizio()?.listInputs() ?: emptyList()
-    } catch (_: Exception) { emptyList() }
+    // ---- Samsung (bedroom monitor) ----
+    private suspend fun ensureSamsung(): SamsungController? {
+        val cfg = config.get()
+        if (!cfg.samsungReady) return null
+        samsung?.let { if (samsungHost == cfg.samsungHost) return it }
+        val c = SamsungController(cfg.samsungHost, cfg.samsungToken)
+        samsung = c; samsungHost = cfg.samsungHost
+        return c
+    }
+
+    suspend fun bedKey(key: String): Boolean {
+        val c = ensureSamsung() ?: return false
+        return try { c.sendKey(key) } catch (_: Exception) { false }
+    }
+
+    suspend fun bedLaunch(appId: String): Boolean {
+        val c = ensureSamsung() ?: return false
+        return try { c.launchApp(appId) } catch (_: Exception) { false }
+    }
+
+    suspend fun bedText(text: String): Boolean {
+        val c = ensureSamsung() ?: return false
+        return try { c.sendText(text) } catch (_: Exception) { false }
+    }
 
     companion object {
         @Volatile private var INSTANCE: Controller? = null
