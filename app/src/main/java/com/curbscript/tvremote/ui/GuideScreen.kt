@@ -82,7 +82,7 @@ fun GuideScreen(vm: RemoteViewModel, onBack: () -> Unit, onPlay: (IptvChannel) -
             Spacer(Modifier.height(10.dp))
             SegmentedToggle(
                 listOf("Watch on phone", "Watch on TV"),
-                if (vm.watchOnTv) 1 else 0, { vm.setWatchOnTv(it == 1) },
+                if (vm.watchOnTv) 1 else 0, { vm.updateWatchOnTv(it == 1) },
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             Spacer(Modifier.height(10.dp))

@@ -270,7 +270,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var watchOnTv by mutableStateOf(false)
         private set
-    fun setWatchOnTv(v: Boolean) { watchOnTv = v }
+    fun updateWatchOnTv(v: Boolean) { watchOnTv = v }
     fun playOnTv(ch: IptvChannel) = fire { controller.playOnTv(ch.streamUrl, ch.name) }
     var guideQuery by mutableStateOf("")
         private set
