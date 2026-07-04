@@ -24,6 +24,14 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".player.PlayerActivity"
+            android:exported="false"
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.CurbRemote" />
+
         <receiver
             android:name=".widget.RemoteWidgetReceiver"
             android:exported="true"

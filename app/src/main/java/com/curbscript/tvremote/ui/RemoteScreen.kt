@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Input
+import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -76,7 +77,7 @@ private val livingApps = listOf(
 )
 
 @Composable
-fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
+fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit, onOpenGuide: () -> Unit) {
     val bedroom = cfg.room == "bedroom"
     val imeActive by vm.imeActive.collectAsState()
     var showKb by remember { mutableStateOf(false) }
@@ -98,6 +99,8 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    IconKey(Icons.Rounded.LiveTv, onOpenGuide, size = 46.dp,
+                        background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 22.dp)
                     IconKey(Icons.Rounded.Keyboard, { showKb = true }, size = 46.dp,
                         background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 22.dp)
                     IconKey(Icons.Rounded.Settings, onOpenSettings, size = 46.dp,

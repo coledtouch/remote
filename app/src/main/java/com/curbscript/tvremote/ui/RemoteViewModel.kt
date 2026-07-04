@@ -11,6 +11,7 @@ import com.curbscript.tvremote.data.AppShortcut
 import com.curbscript.tvremote.data.Config
 import com.curbscript.tvremote.discovery.Discovered
 import com.curbscript.tvremote.hubspace.HubspaceLight
+import com.curbscript.tvremote.iptv.IptvChannel
 import com.curbscript.tvremote.onn.AndroidTvPairing
 import com.curbscript.tvremote.proto.RemoteKeyCode
 import com.curbscript.tvremote.samsung.SamsungController
@@ -261,6 +262,31 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         controller.setLightBrightness(id, pct)
         _lights.value = _lights.value.map { if (it.id == id) it.copy(brightness = pct) else it }
     }
+
+    // ---- IPTV / TV Guide ----
+    private val _channels = MutableStateFlow<List<IptvChannel>>(emptyList())
+    val channels: StateFlow<List<IptvChannel>> = _channels
+    var iptvLoading by mutableStateOf(false)
+        private set
+    var guideQuery by mutableStateOf("")
+        private set
+    fun setGuideQuery(q: String) { guideQuery = q }
+    fun loadIptv() {
+        iptvLoading = true
+        viewModelScope.launch {
+            _channels.value = controller.iptvChannels()
+            iptvLoading = false
+            controller.iptvLoadEpg()
+            _channels.value = _channels.value.toList()
+        }
+    }
+    fun saveIptv(type: String, server: String, user: String, pass: String, m3u: String, epg: String) {
+        viewModelScope.launch {
+            controller.config.setIptv(type, server, user, pass, m3u, epg)
+            loadIptv()
+        }
+    }
+    fun nowNext(ch: IptvChannel) = controller.iptvNowNext(ch.epgId)
 
     private fun friendly(t: Throwable, fallback: String): String =
         t.message?.takeIf { it.isNotBlank() } ?: fallback

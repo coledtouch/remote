@@ -1,7 +1,12 @@
 package com.curbscript.tvremote.control
 
 import android.content.Context
+import com.curbscript.tvremote.data.Config
 import com.curbscript.tvremote.data.ConfigStore
+import com.curbscript.tvremote.iptv.IptvChannel
+import com.curbscript.tvremote.iptv.IptvProgram
+import com.curbscript.tvremote.iptv.IptvRepository
+import com.curbscript.tvremote.iptv.IptvSettings
 import com.curbscript.tvremote.discovery.Discovered
 import com.curbscript.tvremote.discovery.DiscoveryManager
 import com.curbscript.tvremote.hubspace.HubspaceClient
@@ -177,6 +182,20 @@ class Controller private constructor(context: Context) {
         }
         return list
     }
+
+    // ---- IPTV (TV Guide) ----
+    private val iptvRepo = IptvRepository()
+    private fun iptvSettings(cfg: Config) =
+        IptvSettings(cfg.iptvType, cfg.iptvServer, cfg.iptvUser, cfg.iptvPass, cfg.iptvM3u, cfg.iptvEpg)
+    suspend fun iptvChannels(): List<IptvChannel> {
+        val cfg = config.get()
+        return if (cfg.iptvReady) iptvRepo.loadChannels(iptvSettings(cfg)) else emptyList()
+    }
+    suspend fun iptvLoadEpg() {
+        val cfg = config.get()
+        if (cfg.iptvReady) iptvRepo.loadEpg(iptvSettings(cfg))
+    }
+    fun iptvNowNext(epgId: String?): Pair<IptvProgram?, IptvProgram?> = iptvRepo.nowNext(epgId)
 
     companion object {
         @Volatile private var INSTANCE: Controller? = null

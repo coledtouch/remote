@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.curbscript.tvremote.data.Config
 import com.curbscript.tvremote.ui.components.IconKey
+import com.curbscript.tvremote.ui.components.SegmentedToggle
 
 @Composable
 fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: () -> Unit) {
@@ -126,6 +127,10 @@ fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: ()
                 ready = cfg.hubspaceReady, phase = vm.hubspacePhase,
                 onLogin = { e, p -> vm.loginHubspace(e, p) }
             )
+
+            Spacer(Modifier.height(22.dp))
+            SectionHeader("TV Guide")
+            IptvCard(cfg) { type, server, user, pass, m3u, epg -> vm.saveIptv(type, server, user, pass, m3u, epg) }
 
             Spacer(Modifier.height(22.dp))
             Text(
@@ -315,6 +320,58 @@ private fun HubspaceCard(ready: Boolean, phase: PairPhase, onLogin: (String, Str
                     ) { Text(if (ready) "Re-connect" else "Sign in") }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun IptvCard(cfg: Config, onSave: (String, String, String, String, String, String) -> Unit) {
+    var type by rememberSaveable { mutableStateOf(cfg.iptvType.ifBlank { "xtream" }) }
+    var server by rememberSaveable { mutableStateOf(cfg.iptvServer) }
+    var user by rememberSaveable { mutableStateOf(cfg.iptvUser) }
+    var pass by rememberSaveable { mutableStateOf(cfg.iptvPass) }
+    var m3u by rememberSaveable { mutableStateOf(cfg.iptvM3u) }
+    var epg by rememberSaveable { mutableStateOf(cfg.iptvEpg) }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = RemoteColors.surface),
+        shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("IPTV \u00b7 TV Guide", color = RemoteColors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("Xtream or M3U, EPG auto-detected", color = RemoteColors.muted, fontSize = 12.sp)
+                }
+                if (cfg.iptvReady) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = RemoteColors.good, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Set", color = RemoteColors.good, fontSize = 13.sp)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            SegmentedToggle(listOf("Xtream", "M3U"), if (type == "m3u") 1 else 0, { type = if (it == 1) "m3u" else "xtream" })
+            Spacer(Modifier.height(12.dp))
+            if (type == "xtream") {
+                OutlinedTextField(server, { server = it }, label = { Text("Server URL (http://host:port)") },
+                    singleLine = true, colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(user, { user = it }, label = { Text("Username") },
+                    singleLine = true, colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(pass, { pass = it }, label = { Text("Password") }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(), colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+            } else {
+                OutlinedTextField(m3u, { m3u = it }, label = { Text("M3U playlist URL") },
+                    singleLine = true, colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+            }
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(epg, { epg = it }, label = { Text("EPG / XMLTV URL (optional)") },
+                singleLine = true, colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(14.dp))
+            Button(onClick = { onSave(type, server, user, pass, m3u, epg) },
+                colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.coral),
+                shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
+            ) { Text("Save & load guide") }
         }
     }
 }
