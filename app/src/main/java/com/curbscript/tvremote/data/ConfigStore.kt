@@ -24,7 +24,13 @@ data class Config(
     val navTrackpad: Boolean = false,
     val room: String = "living",
     val hubspaceRefresh: String = "",
-    val hubspaceAccount: String = ""
+    val hubspaceAccount: String = "",
+    val iptvType: String = "",
+    val iptvServer: String = "",
+    val iptvUser: String = "",
+    val iptvPass: String = "",
+    val iptvM3u: String = "",
+    val iptvEpg: String = ""
 ) {
     val onnReady: Boolean get() = onnHost.isNotBlank() && onnPaired
     val vizioReady: Boolean get() = vizioHost.isNotBlank() && vizioToken.isNotBlank()
@@ -33,6 +39,7 @@ data class Config(
     val bedroomReady: Boolean get() = samsungReady
     val anyReady: Boolean get() = livingReady || bedroomReady
     val hubspaceReady: Boolean get() = hubspaceRefresh.isNotBlank()
+    val iptvReady: Boolean get() = (iptvType == "xtream" && iptvServer.isNotBlank()) || (iptvType == "m3u" && iptvM3u.isNotBlank())
 }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "curb_remote")
@@ -52,7 +59,13 @@ class ConfigStore(context: Context) {
             navTrackpad = p[Keys.NAV_TRACKPAD] ?: false,
             room = p[Keys.ROOM] ?: "living",
             hubspaceRefresh = p[Keys.HS_REFRESH] ?: "",
-            hubspaceAccount = p[Keys.HS_ACCOUNT] ?: ""
+            hubspaceAccount = p[Keys.HS_ACCOUNT] ?: "",
+            iptvType = p[Keys.IPTV_TYPE] ?: "",
+            iptvServer = p[Keys.IPTV_SERVER] ?: "",
+            iptvUser = p[Keys.IPTV_USER] ?: "",
+            iptvPass = p[Keys.IPTV_PASS] ?: "",
+            iptvM3u = p[Keys.IPTV_M3U] ?: "",
+            iptvEpg = p[Keys.IPTV_EPG] ?: ""
         )
     }
 
@@ -72,6 +85,11 @@ class ConfigStore(context: Context) {
     suspend fun setOnnHost(host: String) = store.edit { it[Keys.ONN_HOST] = host.trim() }
     suspend fun setVizioHost(host: String) = store.edit { it[Keys.VIZIO_HOST] = host.trim() }
     suspend fun setSamsungHost(host: String) = store.edit { it[Keys.SAMSUNG_HOST] = host.trim() }
+    suspend fun setIptv(type: String, server: String, user: String, pass: String, m3u: String, epg: String) =
+        store.edit {
+            it[Keys.IPTV_TYPE] = type; it[Keys.IPTV_SERVER] = server.trim(); it[Keys.IPTV_USER] = user.trim()
+            it[Keys.IPTV_PASS] = pass; it[Keys.IPTV_M3U] = m3u.trim(); it[Keys.IPTV_EPG] = epg.trim()
+        }
     suspend fun setHubspace(refresh: String, account: String) =
         store.edit { it[Keys.HS_REFRESH] = refresh; it[Keys.HS_ACCOUNT] = account }
 
@@ -87,5 +105,11 @@ class ConfigStore(context: Context) {
         val ROOM = stringPreferencesKey("room")
         val HS_REFRESH = stringPreferencesKey("hs_refresh")
         val HS_ACCOUNT = stringPreferencesKey("hs_account")
+        val IPTV_TYPE = stringPreferencesKey("iptv_type")
+        val IPTV_SERVER = stringPreferencesKey("iptv_server")
+        val IPTV_USER = stringPreferencesKey("iptv_user")
+        val IPTV_PASS = stringPreferencesKey("iptv_pass")
+        val IPTV_M3U = stringPreferencesKey("iptv_m3u")
+        val IPTV_EPG = stringPreferencesKey("iptv_epg")
     }
 }
