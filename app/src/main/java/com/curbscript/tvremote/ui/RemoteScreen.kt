@@ -285,8 +285,12 @@ private fun LightsSection(vm: RemoteViewModel, room: String, hubspaceReady: Bool
         vm.lightsLoading && lights.isEmpty() ->
             Text("Loading your bulbs…", color = RemoteColors.muted, fontSize = 13.sp)
         lights.isEmpty() ->
-            Text("Signed in, but no bulbs came back yet. Tap refresh; if they still don't appear, tell me.",
-                color = RemoteColors.muted, fontSize = 13.sp)
+            Text(
+                "Signed in, but no bulbs loaded. " +
+                    (if (vm.lightsDiag.isNotBlank()) "Details: " + vm.lightsDiag + ". " else "") +
+                    "Tap refresh — if it still fails, send me this line.",
+                color = RemoteColors.muted, fontSize = 13.sp
+            )
         else -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             lights.forEach { light ->
                 LightCard(light, { vm.toggleLight(light.id, it) }, { vm.setBrightness(light.id, it) })

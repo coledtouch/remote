@@ -233,6 +233,8 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     val lights: StateFlow<List<HubspaceLight>> = _lights
     var lightsLoading by mutableStateOf(false)
         private set
+    var lightsDiag by mutableStateOf("")
+        private set
 
     fun loginHubspace(email: String, password: String) {
         hubspacePhase = PairPhase.Connecting
@@ -247,6 +249,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         lightsLoading = true
         viewModelScope.launch {
             _lights.value = controller.lights()
+            lightsDiag = controller.hubspaceDiagnostic()
             lightsLoading = false
         }
     }

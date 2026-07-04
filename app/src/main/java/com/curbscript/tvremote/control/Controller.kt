@@ -153,8 +153,14 @@ class Controller private constructor(context: Context) {
         return err
     }
 
-    suspend fun lights(): List<HubspaceLight> =
-        try { hs()?.listLights() ?: emptyList() } catch (_: Exception) { emptyList() }
+    @Volatile private var lastLightsDiag = ""
+    fun hubspaceDiagnostic(): String = lastLightsDiag
+    suspend fun lights(): List<HubspaceLight> {
+        val c = hs() ?: run { lastLightsDiag = "not signed in"; return emptyList() }
+        return try {
+            val l = c.listLights(); lastLightsDiag = c.lastDiagnostic; l
+        } catch (e: Exception) { lastLightsDiag = e.message ?: "error"; emptyList() }
+    }
     suspend fun setLightPower(id: String, on: Boolean): Boolean =
         try { hs()?.setPower(id, on) ?: false } catch (_: Exception) { false }
     suspend fun setLightBrightness(id: String, pct: Int): Boolean =
