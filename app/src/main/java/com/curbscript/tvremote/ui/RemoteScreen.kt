@@ -21,6 +21,7 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Input
+import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -29,8 +30,19 @@ import androidx.compose.material.icons.rounded.VolumeDown
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +72,9 @@ private val livingApps = listOf(
 @Composable
 fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
     val bedroom = cfg.room == "bedroom"
+    val imeActive by vm.imeActive.collectAsState()
+    var showKb by remember { mutableStateOf(false) }
+    LaunchedEffect(imeActive) { if (imeActive) showKb = true }
     Box(Modifier.fillMaxSize().background(RemoteColors.bg)) {
         Box(Modifier.fillMaxWidth().height(240.dp).background(RemoteColors.glow))
         Column(
@@ -75,8 +90,12 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
                         color = RemoteColors.muted, fontSize = 13.sp
                     )
                 }
-                IconKey(Icons.Rounded.Settings, onOpenSettings, size = 46.dp,
-                    background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 22.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    IconKey(Icons.Rounded.Keyboard, { showKb = true }, size = 46.dp,
+                        background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 22.dp)
+                    IconKey(Icons.Rounded.Settings, onOpenSettings, size = 46.dp,
+                        background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 22.dp)
+                }
             }
             Spacer(Modifier.height(16.dp))
             SegmentedToggle(
@@ -96,6 +115,41 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
             Spacer(Modifier.height(22.dp))
             if (bedroom) BedroomRemote(vm, cfg.navTrackpad) else LivingRemote(vm, cfg.navTrackpad)
             Spacer(Modifier.height(40.dp))
+        }
+        if (showKb) KeyboardBar(
+            Modifier.align(Alignment.BottomCenter),
+            onSend = { vm.sendQuery(it) },
+            onClose = { showKb = false }
+        )
+    }
+}
+
+@Composable
+private fun KeyboardBar(modifier: Modifier, onSend: (String) -> Unit, onClose: () -> Unit) {
+    var text by remember { mutableStateOf("") }
+    Column(modifier.fillMaxWidth().background(RemoteColors.bgElevated).padding(16.dp)) {
+        Text("Type for the TV", color = RemoteColors.muted, fontSize = 12.sp)
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = text, onValueChange = { text = it }, singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = RemoteColors.coral,
+                unfocusedBorderColor = RemoteColors.border,
+                focusedTextColor = RemoteColors.onSurface,
+                unfocusedTextColor = RemoteColors.onSurface,
+                cursorColor = RemoteColors.coral
+            )
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = { if (text.isNotEmpty()) { onSend(text); text = "" } },
+                colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.coral),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f)
+            ) { Text("Send") }
+            TextButton(onClick = onClose) { Text("Close", color = RemoteColors.muted) }
         }
     }
 }

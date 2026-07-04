@@ -11,6 +11,7 @@ import com.curbscript.tvremote.vizio.VizioClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Single entry point for the app UI and widget. Routes commands to the right
@@ -22,6 +23,7 @@ class Controller private constructor(context: Context) {
     val config = ConfigStore(context)
     private val certManager = CertManager(context)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val imeActive = MutableStateFlow(false)
 
     @Volatile private var onn: AndroidTvRemote? = null
     @Volatile private var onnHost: String? = null
@@ -43,6 +45,7 @@ class Controller private constructor(context: Context) {
         if (!cfg.onnReady) return null
         onn?.let { if (it.isReady && onnHost == cfg.onnHost) return it }
         val remote = AndroidTvRemote(cfg.onnHost, certManager.socketFactory())
+        remote.onImeShow = { imeActive.value = it }
         return if (remote.connect(scope)) { onn = remote; onnHost = cfg.onnHost; remote } else null
     }
 
@@ -104,6 +107,22 @@ class Controller private constructor(context: Context) {
     suspend fun bedText(text: String): Boolean {
         val c = ensureSamsung() ?: return false
         return try { c.sendText(text) } catch (_: Exception) { false }
+    }
+
+    suspend fun onnType(text: String): Boolean {
+        val r = ensureOnn() ?: return false
+        return try {
+            for (ch in text) charToKeyCode(ch)?.let { r.sendKey(it) }
+            true
+        } catch (_: Exception) { false }
+    }
+
+    private fun charToKeyCode(c: Char): RemoteKeyCode? = when {
+        c in 'a'..'z' -> RemoteKeyCode.forNumber(29 + (c - 'a'))
+        c in 'A'..'Z' -> RemoteKeyCode.forNumber(29 + (c - 'A'))
+        c in '0'..'9' -> RemoteKeyCode.forNumber(7 + (c - '0'))
+        c == ' ' -> RemoteKeyCode.KEYCODE_SPACE
+        else -> null
     }
 
     companion object {

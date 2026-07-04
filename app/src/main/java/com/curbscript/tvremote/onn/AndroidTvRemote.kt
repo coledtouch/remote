@@ -41,6 +41,9 @@ class AndroidTvRemote(
     private val writeMutex = Mutex()
     private var readerJob: Job? = null
 
+    /** Invoked when the TV focuses a text field (show a keyboard). */
+    var onImeShow: ((Boolean) -> Unit)? = null
+
     @Volatile
     var isReady: Boolean = false
         private set
@@ -110,7 +113,10 @@ class AndroidTvRemote(
                                 ).build()
                         )
                     }
-                    // remote_start / volume / ime messages are not needed here.
+                    if (msg.hasRemoteImeShowRequest()) {
+                        onImeShow?.invoke(true)
+                    }
+                    // other server messages are not needed here.
                 }
             } catch (_: Exception) {
                 // Socket dropped or timed out; mark not ready so we reconnect on next use.

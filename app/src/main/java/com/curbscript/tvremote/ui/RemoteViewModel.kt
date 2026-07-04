@@ -33,6 +33,8 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     val config: StateFlow<Config> =
         controller.config.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Config())
 
+    val imeActive: StateFlow<Boolean> = controller.imeActive
+
     // ---- room + nav preferences ----
     fun setRoom(room: String) = viewModelScope.launch { controller.config.setRoom(room) }
     fun setTrackpad(v: Boolean) = viewModelScope.launch { controller.config.setNavTrackpad(v) }
@@ -80,6 +82,14 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     fun bedNetflix() = fire { controller.bedLaunch(SamsungController.APP_NETFLIX) }
     fun bedSpotify() = fire { controller.bedLaunch(SamsungController.APP_SPOTIFY) }
     private fun bed(key: String) = fire { controller.bedKey(key) }
+
+    fun sendQuery(text: String) = fire {
+        if (config.value.room == "bedroom") {
+            controller.bedText(text); controller.bedKey(SamsungController.KEY_ENTER)
+        } else {
+            controller.onnType(text); controller.onnKey(RemoteKeyCode.KEYCODE_ENTER)
+        }
+    }
 
     private fun fire(block: suspend () -> Unit) { viewModelScope.launch { runCatching { block() } } }
 
