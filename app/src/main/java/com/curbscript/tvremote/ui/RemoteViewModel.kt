@@ -9,9 +9,11 @@ import androidx.lifecycle.viewModelScope
 import com.curbscript.tvremote.control.Controller
 import com.curbscript.tvremote.data.AppShortcut
 import com.curbscript.tvremote.data.Config
+import com.curbscript.tvremote.hubspace.HubspaceLight
 import com.curbscript.tvremote.onn.AndroidTvPairing
 import com.curbscript.tvremote.proto.RemoteKeyCode
 import com.curbscript.tvremote.samsung.SamsungController
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -208,6 +210,32 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun resetSamsungPhase() { samsungPhase = PairPhase.Idle }
+
+
+    // ---- Hubspace lights ----
+    var hubspacePhase by mutableStateOf<PairPhase>(PairPhase.Idle)
+        private set
+    private val _lights = MutableStateFlow<List<HubspaceLight>>(emptyList())
+    val lights: StateFlow<List<HubspaceLight>> = _lights
+
+    fun loginHubspace(email: String, password: String) {
+        hubspacePhase = PairPhase.Connecting
+        viewModelScope.launch {
+            val ok = controller.hubspaceLogin(email.trim(), password)
+            if (ok) { hubspacePhase = PairPhase.Success; refreshLights() }
+            else hubspacePhase = PairPhase.Error("Login failed — check email and password")
+        }
+    }
+    fun resetHubspacePhase() { hubspacePhase = PairPhase.Idle }
+    fun refreshLights() { viewModelScope.launch { _lights.value = controller.lights() } }
+    fun toggleLight(id: String, on: Boolean) = viewModelScope.launch {
+        controller.setLightPower(id, on)
+        _lights.value = _lights.value.map { if (it.id == id) it.copy(on = on) else it }
+    }
+    fun setBrightness(id: String, pct: Int) = viewModelScope.launch {
+        controller.setLightBrightness(id, pct)
+        _lights.value = _lights.value.map { if (it.id == id) it.copy(brightness = pct) else it }
+    }
 
     private fun friendly(t: Throwable, fallback: String): String =
         t.message?.takeIf { it.isNotBlank() } ?: fallback

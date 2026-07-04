@@ -34,6 +34,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.curbscript.tvremote.data.AppShortcut
 import com.curbscript.tvremote.data.Config
+import com.curbscript.tvremote.hubspace.HubspaceLight
 import com.curbscript.tvremote.ui.components.AppTile
 import com.curbscript.tvremote.ui.components.DPad
 import com.curbscript.tvremote.ui.components.IconKey
@@ -75,6 +80,7 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
     val imeActive by vm.imeActive.collectAsState()
     var showKb by remember { mutableStateOf(false) }
     LaunchedEffect(imeActive) { if (imeActive) showKb = true }
+    LaunchedEffect(cfg.hubspaceReady) { if (cfg.hubspaceReady) vm.refreshLights() }
     Box(Modifier.fillMaxSize().background(RemoteColors.bg)) {
         Box(Modifier.fillMaxWidth().height(240.dp).background(RemoteColors.glow))
         Column(
@@ -184,6 +190,7 @@ private fun LivingRemote(vm: RemoteViewModel, trackpad: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         livingApps.forEach { app -> AppTile(app, { vm.launchOnn(app.appLink) }) }
     }
+    LightsSection(vm, "living")
 }
 
 @Composable
@@ -218,6 +225,7 @@ private fun BedroomRemote(vm: RemoteViewModel, trackpad: Boolean) {
         AppTile(AppShortcut("Netflix", "", Color(0xFFE50914), "N"), { vm.bedNetflix() })
         AppTile(AppShortcut("Spotify", "", Color(0xFF1DB954), "♪"), { vm.bedSpotify() })
     }
+    LightsSection(vm, "bedroom")
 }
 
 @Composable
@@ -257,5 +265,45 @@ private fun VolumeRocker(onDown: () -> Unit, onUp: () -> Unit) {
         IconKey(Icons.Rounded.VolumeDown, onDown, size = 56.dp, background = RemoteColors.surfaceHi)
         Text("VOLUME", color = RemoteColors.muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         IconKey(Icons.Rounded.VolumeUp, onUp, size = 56.dp, background = RemoteColors.surfaceHi)
+    }
+}
+
+@Composable
+private fun LightsSection(vm: RemoteViewModel, room: String) {
+    val lights by vm.lights.collectAsState()
+    val roomLights = lights.filter { it.room == room || it.room == "both" }
+    if (roomLights.isEmpty()) return
+    Spacer(Modifier.height(30.dp))
+    Row(Modifier.fillMaxWidth()) { SectionLabel("Lights") }
+    Spacer(Modifier.height(12.dp))
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        roomLights.forEach { light ->
+            LightCard(light, { vm.toggleLight(light.id, it) }, { vm.setBrightness(light.id, it) })
+        }
+    }
+}
+
+@Composable
+private fun LightCard(light: HubspaceLight, onToggle: (Boolean) -> Unit, onBrightness: (Int) -> Unit) {
+    var bri by remember(light.id) { mutableStateOf(light.brightness.toFloat()) }
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(RemoteColors.surface)
+            .border(1.dp, RemoteColors.border, RoundedCornerShape(20.dp)).padding(16.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Text(light.name, color = RemoteColors.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Switch(
+                checked = light.on, onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White, checkedTrackColor = RemoteColors.coral,
+                    uncheckedTrackColor = RemoteColors.surfaceHi
+                )
+            )
+        }
+        Slider(
+            value = bri, onValueChange = { bri = it }, valueRange = 1f..100f,
+            onValueChangeFinished = { onBrightness(bri.toInt()) },
+            colors = SliderDefaults.colors(thumbColor = RemoteColors.coral, activeTrackColor = RemoteColors.amber)
+        )
     }
 }

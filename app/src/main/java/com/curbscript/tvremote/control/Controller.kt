@@ -2,6 +2,8 @@ package com.curbscript.tvremote.control
 
 import android.content.Context
 import com.curbscript.tvremote.data.ConfigStore
+import com.curbscript.tvremote.hubspace.HubspaceClient
+import com.curbscript.tvremote.hubspace.HubspaceLight
 import com.curbscript.tvremote.onn.AndroidTvPairing
 import com.curbscript.tvremote.onn.AndroidTvRemote
 import com.curbscript.tvremote.onn.CertManager
@@ -124,6 +126,35 @@ class Controller private constructor(context: Context) {
         c == ' ' -> RemoteKeyCode.KEYCODE_SPACE
         else -> null
     }
+
+    // ---- Hubspace (EcoSmart lights, cloud) ----
+    @Volatile private var hubspace: HubspaceClient? = null
+
+    private suspend fun hs(): HubspaceClient? {
+        val cfg = config.get()
+        if (!cfg.hubspaceReady) return null
+        hubspace?.let { return it }
+        val c = HubspaceClient(cfg.hubspaceRefresh, cfg.hubspaceAccount.ifBlank { null })
+        hubspace = c
+        return c
+    }
+
+    suspend fun hubspaceLogin(email: String, password: String): Boolean {
+        val c = HubspaceClient()
+        val ok = try { c.login(email, password) } catch (_: Exception) { false }
+        if (ok) {
+            hubspace = c
+            config.setHubspace(c.refreshTokenValue() ?: "", c.accountValue() ?: "")
+        }
+        return ok
+    }
+
+    suspend fun lights(): List<HubspaceLight> =
+        try { hs()?.listLights() ?: emptyList() } catch (_: Exception) { emptyList() }
+    suspend fun setLightPower(id: String, on: Boolean): Boolean =
+        try { hs()?.setPower(id, on) ?: false } catch (_: Exception) { false }
+    suspend fun setLightBrightness(id: String, pct: Int): Boolean =
+        try { hs()?.setBrightness(id, pct) ?: false } catch (_: Exception) { false }
 
     companion object {
         @Volatile private var INSTANCE: Controller? = null

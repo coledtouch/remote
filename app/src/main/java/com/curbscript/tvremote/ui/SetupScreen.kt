@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.curbscript.tvremote.data.Config
@@ -93,6 +94,13 @@ fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: ()
                 codeHint = "", showPort = false, initialPort = 8002, requiresCode = false,
                 onPair = { host, _ -> vm.startSamsungPairing(host) },
                 onConfirm = { }, onReset = { vm.resetSamsungPhase() }
+            )
+
+            Spacer(Modifier.height(22.dp))
+            SectionHeader("Lights")
+            HubspaceCard(
+                ready = cfg.hubspaceReady, phase = vm.hubspacePhase,
+                onLogin = { e, p -> vm.loginHubspace(e, p) }
             )
 
             Spacer(Modifier.height(22.dp))
@@ -236,3 +244,53 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLabelColor = RemoteColors.coral,
     unfocusedLabelColor = RemoteColors.muted
 )
+
+@Composable
+private fun HubspaceCard(ready: Boolean, phase: PairPhase, onLogin: (String, String) -> Unit) {
+    var email by rememberSaveable { mutableStateOf("") }
+    var pass by rememberSaveable { mutableStateOf("") }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = RemoteColors.surface),
+        shape = RoundedCornerShape(22.dp), modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("EcoSmart · Hubspace", color = RemoteColors.onSurface, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("Living-room lamp, hallway, nightstands", color = RemoteColors.muted, fontSize = 12.sp)
+                }
+                if (ready) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = RemoteColors.good, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Connected", color = RemoteColors.good, fontSize = 13.sp)
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Hubspace email") },
+                singleLine = true, colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text("Password") },
+                singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                colors = fieldColors(), modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(14.dp))
+            when (phase) {
+                is PairPhase.Connecting -> WaitingRow("Signing in…")
+                is PairPhase.Success -> Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.CheckCircle, null, tint = RemoteColors.good, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("Signed in — your bulbs appear on the remote", color = RemoteColors.good, fontSize = 14.sp)
+                }
+                else -> {
+                    if (phase is PairPhase.Error) {
+                        Text(phase.message, color = RemoteColors.power, fontSize = 13.sp)
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    Button(onClick = { onLogin(email, pass) },
+                        colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.coral),
+                        shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
+                    ) { Text(if (ready) "Re-connect" else "Sign in") }
+                }
+            }
+        }
+    }
+}

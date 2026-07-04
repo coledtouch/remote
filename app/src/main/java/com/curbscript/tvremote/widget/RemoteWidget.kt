@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -39,20 +40,38 @@ import com.curbscript.tvremote.proto.RemoteKeyCode
 
 private val CMD = ActionParameters.Key<String>("cmd")
 private val TILE_BG = Color(0xCC15171C)
-private val OK_BG = Color(0xE63A56C8)
+private val OK_BG = Color(0xE6FF7A4D)
+
+data class AppEntry(val cmd: String, val icon: ImageProvider)
 
 /**
  * Full-feature living-room widget: transparent background, dark translucent
- * control tiles, brand app tiles, resizable up to ~5x6. All taps dispatch
- * through the shared [Controller] (TV keys -> Vizio, navigation/apps -> onn).
+ * control tiles, real installed app icons (brand-tile fallback), resizable to ~5x6.
  */
 class RemoteWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent { Content() }
+        val apps = loadAppIcons(context)
+        provideContent { Content(apps) }
+    }
+
+    /** Real launcher icons where the phone has the app; brand-tile fallback otherwise. */
+    private fun loadAppIcons(context: Context): List<AppEntry> {
+        val pm = context.packageManager
+        fun icon(pkg: String, fallback: Int): ImageProvider = try {
+            ImageProvider(pm.getApplicationIcon(pkg).toBitmap(96, 96))
+        } catch (e: Exception) {
+            ImageProvider(fallback)
+        }
+        return listOf(
+            AppEntry("app_tivimate", icon("ar.tvplayer.tv", R.drawable.ic_app_tivimate)),
+            AppEntry("app_youtube", icon("com.google.android.youtube", R.drawable.ic_app_youtube)),
+            AppEntry("app_netflix", icon("com.netflix.mediaclient", R.drawable.ic_app_netflix)),
+            AppEntry("app_spotify", icon("com.spotify.music", R.drawable.ic_app_spotify))
+        )
     }
 
     @Composable
-    private fun Content() {
+    private fun Content(apps: List<AppEntry>) {
         Column(
             modifier = GlanceModifier.fillMaxSize().padding(6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -83,10 +102,7 @@ class RemoteWidget : GlanceAppWidget() {
                 Ctl(R.drawable.ic_play_pause, "playpause", GlanceModifier.defaultWeight())
             }
             Row(GlanceModifier.fillMaxWidth().defaultWeight()) {
-                Tile(R.drawable.ic_app_tivimate, "app_tivimate", GlanceModifier.defaultWeight())
-                Tile(R.drawable.ic_app_youtube, "app_youtube", GlanceModifier.defaultWeight())
-                Tile(R.drawable.ic_app_netflix, "app_netflix", GlanceModifier.defaultWeight())
-                Tile(R.drawable.ic_app_spotify, "app_spotify", GlanceModifier.defaultWeight())
+                apps.forEach { app -> AppButton(app.icon, app.cmd, GlanceModifier.defaultWeight()) }
             }
         }
     }
@@ -98,11 +114,8 @@ class RemoteWidget : GlanceAppWidget() {
                 .clickable(actionRunCallback<RemoteAction>(actionParametersOf(CMD to cmd))),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                provider = ImageProvider(iconRes),
-                contentDescription = null,
-                modifier = GlanceModifier.size(24.dp)
-            )
+            Image(provider = ImageProvider(iconRes), contentDescription = null,
+                modifier = GlanceModifier.size(24.dp))
         }
     }
 
@@ -113,30 +126,20 @@ class RemoteWidget : GlanceAppWidget() {
                 .clickable(actionRunCallback<RemoteAction>(actionParametersOf(CMD to "ok"))),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                "OK",
-                style = TextStyle(
-                    color = ColorProvider(Color.White),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-            )
+            Text("OK", style = TextStyle(color = ColorProvider(Color.White),
+                fontWeight = FontWeight.Bold, fontSize = 15.sp))
         }
     }
 
     @Composable
-    private fun Tile(iconRes: Int, cmd: String, modifier: GlanceModifier) {
+    private fun AppButton(icon: ImageProvider, cmd: String, modifier: GlanceModifier) {
         Box(
-            modifier = modifier.fillMaxHeight().padding(3.dp)
+            modifier = modifier.fillMaxHeight().padding(3.dp).cornerRadius(16.dp)
                 .clickable(actionRunCallback<RemoteAction>(actionParametersOf(CMD to cmd))),
             contentAlignment = Alignment.Center
         ) {
-            Image(
-                provider = ImageProvider(iconRes),
-                contentDescription = null,
-                modifier = GlanceModifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
+            Image(provider = icon, contentDescription = null,
+                modifier = GlanceModifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
     }
 }

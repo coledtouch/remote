@@ -22,7 +22,9 @@ data class Config(
     val samsungHost: String = "",
     val samsungToken: String = "",
     val navTrackpad: Boolean = false,
-    val room: String = "living"
+    val room: String = "living",
+    val hubspaceRefresh: String = "",
+    val hubspaceAccount: String = ""
 ) {
     val onnReady: Boolean get() = onnHost.isNotBlank() && onnPaired
     val vizioReady: Boolean get() = vizioHost.isNotBlank() && vizioToken.isNotBlank()
@@ -30,6 +32,7 @@ data class Config(
     val livingReady: Boolean get() = vizioReady || onnReady
     val bedroomReady: Boolean get() = samsungReady
     val anyReady: Boolean get() = livingReady || bedroomReady
+    val hubspaceReady: Boolean get() = hubspaceRefresh.isNotBlank()
 }
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "curb_remote")
@@ -47,7 +50,9 @@ class ConfigStore(context: Context) {
             samsungHost = p[Keys.SAMSUNG_HOST] ?: "",
             samsungToken = p[Keys.SAMSUNG_TOKEN] ?: "",
             navTrackpad = p[Keys.NAV_TRACKPAD] ?: false,
-            room = p[Keys.ROOM] ?: "living"
+            room = p[Keys.ROOM] ?: "living",
+            hubspaceRefresh = p[Keys.HS_REFRESH] ?: "",
+            hubspaceAccount = p[Keys.HS_ACCOUNT] ?: ""
         )
     }
 
@@ -64,6 +69,8 @@ class ConfigStore(context: Context) {
 
     suspend fun setNavTrackpad(v: Boolean) = store.edit { it[Keys.NAV_TRACKPAD] = v }
     suspend fun setRoom(r: String) = store.edit { it[Keys.ROOM] = r }
+    suspend fun setHubspace(refresh: String, account: String) =
+        store.edit { it[Keys.HS_REFRESH] = refresh; it[Keys.HS_ACCOUNT] = account }
 
     private object Keys {
         val ONN_HOST = stringPreferencesKey("onn_host")
@@ -75,5 +82,7 @@ class ConfigStore(context: Context) {
         val SAMSUNG_TOKEN = stringPreferencesKey("samsung_token")
         val NAV_TRACKPAD = booleanPreferencesKey("nav_trackpad")
         val ROOM = stringPreferencesKey("room")
+        val HS_REFRESH = stringPreferencesKey("hs_refresh")
+        val HS_ACCOUNT = stringPreferencesKey("hs_account")
     }
 }
