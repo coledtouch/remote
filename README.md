@@ -1,165 +1,155 @@
 # Curb Remote
 
-A lightweight, dark, modern Android app + home‑screen widget that controls your
-**Vizio VQM65C‑10** TV and your **onn 4K Pro (Google TV)** streaming box — directly
-over your Wi‑Fi, with no extra hub or bridge server.
+A dark, modern Android app + home‑screen widget that runs your living room and
+bedroom from your phone — TVs, streaming boxes, smart lights, and live TV — all
+over Wi‑Fi, with no hub or bridge server.
 
-- **Vizio TV** ← SmartCast local API: power, volume, mute, input switching.
-- **onn 4K Pro** ← Android TV Remote v2 (the same protocol the Google TV app uses):
-  D‑pad + OK/Back/Home, playback, and one‑tap app launches (Netflix, YouTube, …).
-- **Home‑screen widget:** TV power / volume / mute + quick YouTube & Netflix.
-
-Everything runs on the phone. The onn box being always‑on means the app can reach it
-instantly; the app itself speaks both device protocols, so there is nothing else to run.
+**Living Room:** Vizio VQM65C‑10 (SmartCast) + onn 4K Pro (Google TV)
+**Bedroom:** Samsung S32DM702UN monitor (Tizen) + onn Bluetooth soundbar (via the monitor)
+**Lights:** EcoSmart / Hubspace bulbs, grouped per room with scene presets
+**Live TV:** an IPTV TV Guide (Xtream Codes or M3U) you can watch on the phone, cast, or push to the TV
 
 ---
 
-## 1. Get the APK
+## 1. Get the app
 
-You do **not** need to be a developer. Pick whichever is easier for you.
+You don't need to be a developer. This repo builds itself in the cloud.
 
-### Option A — Build in the cloud (recommended, no tools to install)
+1. Open the **Actions** tab of this repo on GitHub.
+2. Open the newest green run and download the artifact — inside are two files:
+   - **`app-debug.apk`** — the phone app (install this).
+   - **`tvapp-debug.apk`** — the companion "Curb TV" player for your streaming box
+     (you normally don't need this by hand; the phone can install it for you — see §7).
+3. Copy `app-debug.apk` to your phone, tap it, allow install from this source, open **Curb Remote**.
 
-1. Create a free account at <https://github.com> if you don't have one.
-2. Make a new repository and upload this whole project folder to it
-   (drag‑and‑drop works: *Add file → Upload files*).
-3. GitHub automatically runs the included build (see the **Actions** tab).
-   When it finishes (~3 min), open the run and download the artifact
-   **`curb-remote-debug-apk`** — inside is `app-debug.apk`.
-4. Copy that APK to your phone and install it (see **Install** below).
-
-The build recipe lives in `.github/workflows/build.yml` and needs no configuration.
-
-### Option B — Android Studio
-
-1. Install [Android Studio](https://developer.android.com/studio) (free).
-2. *File → Open* this folder. Let it sync (it downloads Gradle + SDK automatically).
-3. Plug in your phone (USB debugging on) and press **Run**, or
-   *Build → Build Bundle(s) / APK(s) → Build APK(s)*.
+It's a debug build (standard Android debug key), local‑network only.
 
 ---
 
-## 2. Install on your phone
+## 2. First‑time setup (pairing)
 
-1. Move `app-debug.apk` to the phone (USB, Google Drive, email to yourself, etc.).
-2. Tap it. Android will ask to allow installing from this source — allow it.
-3. Open **Curb Remote**.
+Put your phone and all devices on the **same Wi‑Fi**, then open **Set up devices**
+(the gear icon). Tap **Auto‑detect devices on Wi‑Fi** to fill in IPs, or enter them
+by hand. Find any device's IP in its own network settings.
 
-> It's a debug build signed with the standard Android debug key, so it installs
-> without Play Store. It only talks to devices on your local network.
+- **onn 4K Pro** — enter its IP, tap **Pair**, then type the 6‑character code shown on the TV.
+- **Vizio TV** — enter its IP (port **7345**; older firmware uses **9000**), tap **Pair**, type the PIN.
+- **Samsung monitor** — enter its IP, tap **Pair**, then tap **Allow** on the monitor.
+- **Hubspace (lights)** — sign in with your Hubspace email + password. (Two‑factor isn't
+  supported yet; if your account has it on, turn it off, sign in here, turn it back on.)
+- **IPTV** — pick **Xtream** (server + username + password) or **M3U** (playlist URL),
+  optionally add an EPG/XMLTV URL, then **Save & load guide**.
 
----
-
-## 3. First‑time setup (pairing)
-
-Make sure your **phone, TV, and onn box are on the same Wi‑Fi**. On first launch the
-app opens the **Set up devices** screen.
-
-### onn 4K Pro
-1. Find its IP: on the box, **Settings → Network & Internet → (your Wi‑Fi) → IP address**.
-2. Type that IP in the app and tap **Pair**.
-3. A 6‑character code appears on the TV. Enter it in the app and tap **Confirm & pair**.
-
-### Vizio VQM65C‑10
-1. Find its IP: **Menu → Network → Manual Setup → IP address** (or in your router).
-2. Type the IP (leave **Port** at `7345`; if pairing fails, try `9000`) and tap **Pair**.
-3. A PIN appears on the TV. Enter it and tap **Confirm & pair**.
-
-You can re‑open setup any time from the gear icon, and re‑pair either device.
+Everything is stored only on the phone.
 
 ---
 
-## 4. Add the home‑screen widget
+## 3. Rooms
 
-Long‑press your phone's home screen → **Widgets** → find **Curb Remote** → drag it out.
-It gives you TV **Power / Vol− / Vol+ / Mute** and one‑tap **YouTube / Netflix** on the onn.
+Use the **Living Room / Bedroom** switch at the top. Each room shows the right
+remote (Vizio+onn vs Samsung), the right apps, and that room's lights.
 
----
-
-## 5. How the buttons are routed
-
-| Control | Goes to | Why |
+| Control | Living Room | Bedroom |
 |---|---|---|
-| Power, Volume, Mute, Input | **Vizio TV** | The TV owns the panel, speakers, and inputs |
-| D‑pad, OK, Back, Home, Menu | **onn 4K Pro** | Navigation of the Google TV interface |
-| Play/Pause, Rewind, Fast‑forward, Prev/Next | **onn 4K Pro** | Media transport keys |
-| App shortcuts (Netflix, YouTube, …) | **onn 4K Pro** | Launched via Android TV app links |
+| Power / Volume / Mute | Vizio TV | Samsung monitor (soundbar via monitor) |
+| D‑pad / OK / Back / Home / Menu | onn 4K Pro | Samsung |
+| Playback | onn 4K Pro | Samsung |
+| Apps | onn (TiviMate, YouTube, Netflix, Spotify) | Samsung (YouTube, Netflix, Spotify) |
+| Keyboard | pops up automatically when the TV shows a text field | same |
+
+Switch the navigation between **D‑pad** and **Trackpad** any time.
 
 ---
 
-## 6. Troubleshooting
+## 4. Lights + Scenes
 
-- **"Couldn't reach the device"** — confirm the IP and that the phone is on the same
-  Wi‑Fi (not a guest network). Give the devices static/reserved IPs in your router so
-  they don't change.
-- **Vizio pairing fails** — switch the port between **7345** and **9000**. Make sure the
-  TV is on. Some Vizios ask you to enable mobile control under
-  *Menu → System → Mobile Devices / SmartCast*.
-- **onn pairing fails** — the box must have the pre‑installed *Android TV Remote Service*
-  (it does by default). If a stale pairing exists, remove *Curb Remote* under
-  *Settings → Remotes & Accessories* on the onn, then pair again.
-- **App shortcut doesn't open** — a few apps use different deep links; the standard ones
-  are included. Everything else keeps working.
-- **Widget taps feel slow the first time** — the app opens a secure connection to the
-  onn box on the first command, then stays fast.
+The **Lights** panel sits at the top of the remote once you're signed into Hubspace.
+
+- **Pick this room's bulbs:** tap the sliders icon on the Lights header and check the
+  bulbs that belong to this room. Only those show here — no whole‑house list. Saved per room.
+- **Per‑bulb control:** toggle on/off and drag the brightness slider.
+- **Scenes** (one tap, applied to the room's bulbs):
+  - **Movie** — warm, dim (12%)
+  - **Daytime** — cool, full brightness
+  - **Night** — warm, very dim (nightlight)
+  - **Chill** — warm, 35% — and launches **Spotify** on that room's TV for the mood
+
+Color temperature is best‑effort: tunable bulbs go warm/cool, dimmable‑only bulbs
+just change brightness.
 
 ---
 
-## 7. How it works (for the curious)
+## 5. TV Guide (live TV)
 
-- **Vizio SmartCast**: HTTPS REST on `https://<tv>:7345` (self‑signed cert). Pairing
-  returns an `AUTH_TOKEN`; commands are `PUT /key_command/` with `{CODESET, CODE}` pairs.
-- **Android TV Remote v2**: two TLS services — pairing on **6467**, commands on **6466** —
-  exchanging length‑delimited protobuf messages. The app generates a self‑signed client
-  certificate once (`app/src/main/proto/*.proto` define the messages); pairing proves both
-  sides share the on‑screen code via a SHA‑256 of both certificates' public keys + the code.
+Tap the **Guide** (LiveTv) icon. You get your channel list with now/next from the EPG,
+logos, and search. Pick a channel and choose how to watch:
 
-Built with Kotlin, Jetpack Compose (Material 3), Glance (widget), protobuf‑lite, and
-BouncyCastle. Min Android 8.0.
+- **On the phone** — built‑in player with **Picture‑in‑Picture**.
+- **Cast** — to any Chromecast/Cast device.
+- **On the TV** — launches the companion **Curb TV** app on your onn and plays it there,
+  so the phone and the big screen stay in sync.
+
+---
+
+## 6. Home‑screen widget
+
+Long‑press the home screen → **Widgets** → **Curb Remote**. Resizable on the Android
+grid, transparent background, dark theme: TV **Power / Vol / Mute** plus one‑tap app
+shortcuts using your installed apps' real icons.
+
+---
+
+## 7. Install "Curb TV" on your streaming box (one tap, no computer)
+
+To use **Watch on TV**, the small companion player has to be on your onn box. The phone
+can sideload it for you over the network:
+
+1. On the TV: **Settings → System → About → tap Build 7×**, then **Developer options →**
+   turn on **USB debugging** (and "Wireless/ADB debugging" if shown).
+2. In the phone app: **Setup → Install Curb TV on your box** → the TV's IP is pre‑filled →
+   **Install Curb TV**.
+3. **Accept** the "Allow debugging?" prompt on the TV the first time.
+
+The phone generates its own ADB key and installs the app over ADB (port 5555). If your
+box can't do network ADB, sideload `tvapp-debug.apk` manually instead.
+
+---
+
+## 8. Privacy & security
+
+- The app's stored tokens/passwords are **excluded from Android backup** (`allowBackup=false`),
+  so they don't leave the phone via `adb backup` or cloud backup.
+- The companion Curb TV player only accepts playback commands carrying a **shared app token**,
+  so a random device on your Wi‑Fi can't hijack your screen.
+- All device traffic stays on your local network (except the Hubspace and IPTV provider logins).
+
+---
+
+## 9. How it works (for the curious)
+
+- **Vizio SmartCast** — HTTPS REST on `:7345` (self‑signed); `PUT /key_command/` with `{CODESET, CODE}`.
+- **Android TV Remote v2** — TLS pairing on `:6467`, commands on `:6466`, length‑delimited
+  protobuf; the app makes a client cert once and proves the on‑screen code via SHA‑256.
+- **Samsung Tizen** — `wss://<ip>:8002` remote; token granted by the on‑screen Allow prompt.
+- **Hubspace/Afero** — Keycloak OAuth (PKCE); device state via `api2.afero.net`.
+- **IPTV** — Xtream `player_api.php` / M3U playlists; XMLTV EPG; Media3 + Cast; a tiny
+  HTTP server in the companion TV app receives channels from the phone.
+
+Built with Kotlin, Jetpack Compose (Material 3), Glance (widget), Media3/ExoPlayer, the
+Cast SDK, protobuf‑lite, and BouncyCastle. Min Android 8.0.
 
 ---
 
 ## Project layout
 
 ```
-app/src/main/
-  proto/                     Android TV Remote v2 message definitions
-  java/com/curbscript/tvremote/
-    onn/                     Cert + pairing + persistent remote session (Google TV)
-    vizio/                   SmartCast REST client (TV)
-    control/Controller.kt    Routes each button to the right device
-    data/                    Saved config + app‑shortcut definitions
-    ui/                      Dark Compose remote + setup/pairing screens
-    widget/                  Glance home‑screen widget
-.github/workflows/build.yml  Cloud APK build
+app/src/main/java/com/curbscript/tvremote/
+  onn/ vizio/ samsung/ hubspace/    device clients
+  iptv/ player/ cast/ tvsync/       TV guide, player, casting, phone→TV sync
+  adb/                              one-tap Curb TV installer (network ADB)
+  discovery/                        Wi‑Fi auto-detect (SSDP + mDNS)
+  control/Controller.kt             routes every action to the right device
+  data/  ui/  widget/               config, Compose screens, home-screen widget
+tvapp/                              companion "Curb TV" player for Android TV
+.github/workflows/build.yml         cloud build (both APKs)
 ```
-
-## Companion TV app (Curb TV) — Phase 3
-
-`tvapp/` is a separate, minimal Android TV app. Install it on the onn 4K Pro to watch
-IPTV channels on the TV, controlled from your phone (Guide → "Watch on TV").
-
-- CI builds it as **tvapp-debug.apk** alongside the phone APK (same Actions artifact).
-- Sideload it onto the onn:
-  - **Easiest:** on the onn, install the **Downloader** app (by AFTVnews) from Google Play,
-    then open the artifact link / a hosted copy of `tvapp-debug.apk` and let it install
-    (enable "install unknown apps" for Downloader when prompted), or
-  - **adb:** `adb connect <onn-ip>:5555` then `adb install tvapp-debug.apk`.
-- Open **Curb TV** once on the onn; it shows `http://<onn-ip>:8099` and waits.
-- On the phone: open the **TV Guide**, flip **Watch on TV**, tap a channel — the phone
-  launches Curb TV on the onn and streams the channel there.
-
-### One-tap install of Curb TV (auto-sideload over ADB)
-
-The phone app bundles `curbtv.apk` and can push it to your Android TV box itself
-(no computer, no Downloader):
-
-1. On the TV: Settings → System → About → tap **Build** 7× → **Developer options** →
-   enable **USB debugging** (and "Wireless debugging"/"ADB over network" if shown).
-2. In the phone app: **Setup → Install Curb TV on your box** → enter the TV's IP
-   (auto-filled from your onn) → **Install Curb TV**.
-3. **Accept** the "Allow debugging?" prompt on the TV the first time. The app installs
-   Curb TV over ADB (port 5555).
-
-If ADB 5555 isn't reachable on your box, fall back to sideloading `tvapp-debug.apk`
-via the Downloader app or `adb install`.
