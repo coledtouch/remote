@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,6 +48,7 @@ import com.curbscript.tvremote.ui.components.IconKey
 
 @Composable
 fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: () -> Unit) {
+    LaunchedEffect(Unit) { if (vm.foundDevices.isEmpty()) vm.scan() }
     Box(Modifier.fillMaxSize().background(RemoteColors.bg)) {
         Box(Modifier.fillMaxWidth().height(220.dp).background(RemoteColors.glow))
         Column(
@@ -69,11 +71,11 @@ fun SetupScreen(vm: RemoteViewModel, cfg: Config, canClose: Boolean, onClose: ()
             Spacer(Modifier.height(16.dp))
             Button(
                 onClick = { vm.scan() }, enabled = !vm.scanning,
-                colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.surfaceHi),
+                colors = ButtonDefaults.buttonColors(containerColor = RemoteColors.coral, contentColor = Color.White),
                 shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()
             ) {
                 if (vm.scanning) {
-                    CircularProgressIndicator(color = RemoteColors.coral, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(10.dp))
                     Text("Scanning your Wi-Fi…")
                 } else {

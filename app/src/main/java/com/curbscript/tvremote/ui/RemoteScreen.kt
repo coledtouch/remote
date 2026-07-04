@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.VolumeDown
 import androidx.compose.material.icons.rounded.VolumeOff
@@ -118,7 +119,9 @@ fun RemoteScreen(vm: RemoteViewModel, cfg: Config, onOpenSettings: () -> Unit) {
                     StatusChip("onn", cfg.onnReady)
                 }
             }
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(6.dp))
+            LightsSection(vm, cfg.room, cfg.hubspaceReady)
+            Spacer(Modifier.height(10.dp))
             if (bedroom) BedroomRemote(vm, cfg.navTrackpad) else LivingRemote(vm, cfg.navTrackpad)
             Spacer(Modifier.height(40.dp))
         }
@@ -190,7 +193,6 @@ private fun LivingRemote(vm: RemoteViewModel, trackpad: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
         livingApps.forEach { app -> AppTile(app, { vm.launchOnn(app.appLink) }) }
     }
-    LightsSection(vm, "living")
 }
 
 @Composable
@@ -225,7 +227,6 @@ private fun BedroomRemote(vm: RemoteViewModel, trackpad: Boolean) {
         AppTile(AppShortcut("Netflix", "", Color(0xFFE50914), "N"), { vm.bedNetflix() })
         AppTile(AppShortcut("Spotify", "", Color(0xFF1DB954), "♪"), { vm.bedSpotify() })
     }
-    LightsSection(vm, "bedroom")
 }
 
 @Composable
@@ -269,16 +270,27 @@ private fun VolumeRocker(onDown: () -> Unit, onUp: () -> Unit) {
 }
 
 @Composable
-private fun LightsSection(vm: RemoteViewModel, room: String) {
-    val lights by vm.lights.collectAsState()
-    val roomLights = lights.filter { it.room == room || it.room == "both" }
-    if (roomLights.isEmpty()) return
-    Spacer(Modifier.height(30.dp))
-    Row(Modifier.fillMaxWidth()) { SectionLabel("Lights") }
+private fun LightsSection(vm: RemoteViewModel, room: String, hubspaceReady: Boolean) {
+    if (!hubspaceReady) return
+    val all by vm.lights.collectAsState()
+    val matched = all.filter { it.room == room || it.room == "both" }
+    val lights = if (matched.isEmpty() && all.isNotEmpty()) all else matched
+    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+        SectionLabel("Lights")
+        IconKey(Icons.Rounded.Refresh, { vm.refreshLights() }, size = 38.dp,
+            background = RemoteColors.surface, tint = RemoteColors.muted, iconSize = 18.dp)
+    }
     Spacer(Modifier.height(12.dp))
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        roomLights.forEach { light ->
-            LightCard(light, { vm.toggleLight(light.id, it) }, { vm.setBrightness(light.id, it) })
+    when {
+        vm.lightsLoading && lights.isEmpty() ->
+            Text("Loading your bulbs…", color = RemoteColors.muted, fontSize = 13.sp)
+        lights.isEmpty() ->
+            Text("Signed in, but no bulbs came back yet. Tap refresh; if they still don't appear, tell me.",
+                color = RemoteColors.muted, fontSize = 13.sp)
+        else -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            lights.forEach { light ->
+                LightCard(light, { vm.toggleLight(light.id, it) }, { vm.setBrightness(light.id, it) })
+            }
         }
     }
 }
